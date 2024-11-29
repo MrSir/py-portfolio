@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "py-portfolio"
+version = "0.1.0"
+description = ""
+authors = ["Mitko Tochev <mr.sir88@gmail.com>"]
+readme = "README.md"
+packages = [{include = "pyp", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+ruff = "^0.8.1"
+mypy = "^1.13.0"
+
+[tool.poetry.scripts]
+nats = "pyp.cli.main:app"
+
+[tool.ruff]
+line-length = 120
+src = ["src", "tests"]
+preview = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+
+
