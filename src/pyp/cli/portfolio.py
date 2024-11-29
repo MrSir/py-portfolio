@@ -14,18 +14,12 @@ def callback(
     pass
 
 
-@portfolio.command(
-    name="create",
-    help="Creates a portfolio for a specific user."
-)
+@portfolio.command(name="create", help="Creates a portfolio for a specific user.")
 def create(ctx: typer.Context) -> None:
     pass
 
 
-@portfolio.command(
-    name="add-moniker",
-    help="Add a moniker to the portfolio."
-)
+@portfolio.command(name="add-moniker", help="Add a moniker to the portfolio.")
 def add(
     ctx: typer.Context,
     portfolio_name: Annotated[str, typer.Argument(help="The portfolio to which to add the moniker.")],
@@ -34,10 +28,7 @@ def add(
     pass
 
 
-@portfolio.command(
-    name="delete-moniker",
-    help="Delete a moniker from the portfolio."
-)
+@portfolio.command(name="delete-moniker", help="Delete a moniker from the portfolio.")
 def delete(
     ctx: typer.Context,
     portfolio_name: Annotated[str, typer.Argument(help="The portfolio to which to add the moniker.")],
