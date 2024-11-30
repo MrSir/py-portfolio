@@ -16,6 +16,7 @@ app.add_typer(portfolio_app)
 if __name__ == "__main__":
     app()
 
+
 @app.command(name="setup", help="Creates the database and sets up the project.")
 def setup() -> None:
     Base.metadata.create_all(engine)
