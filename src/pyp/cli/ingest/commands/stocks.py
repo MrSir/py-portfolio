@@ -1,22 +1,44 @@
+import json
+from datetime import datetime
+from functools import cached_property
+from typing import Sequence
+
+from pandas import DataFrame
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from yfinance import Ticker
+from yfinance import Ticker, download
 
 from pyp.database.engine import engine
-from pyp.database.models import Stock
+from pyp.database.models import Stock, Currency, Price
 
 
 class IngestStocks:
     @property
-    def stocks(self) -> list[Stock]:
+    def stocks(self) -> Sequence[Stock]:
         with Session(engine) as session:
             stocks = session.scalars(select(Stock)).all()
 
         return stocks
 
-    @property
+    @cached_property
+    def stocks_by_moniker(self) -> dict[str, Stock]:
+        with Session(engine) as session:
+            stocks = session.scalars(select(Stock)).all()
+
+        return {s.moniker: s for s in stocks}
+
+    @cached_property
     def monikers(self) -> list[str]:
         return [stock.moniker for stock in self.stocks]
+
+    @cached_property
+    def currencies(self) -> Sequence[Currency]:
+        with Session(engine) as session:
+            currencies = session.scalars(select(Currency)).all()
+
+        return currencies
+
 
     def update_stock_info(self) -> None:
         with Session(engine) as session:
@@ -26,30 +48,45 @@ class IngestStocks:
                 ticker = Ticker(stock.moniker)
                 info = ticker.info
 
+                stock.stock_type = info["quoteType"]
                 stock.name = info["longName"]
                 stock.description = info["longBusinessSummary"]
+                stock.sector_weightings = json.dumps(ticker.funds_data.sector_weightings)
+
+                stock.currency = next(iter([c for c in self.currencies if c.name == info["currency"]]), None)
 
                 session.commit()
 
-    def update_stock_holdings(self) -> None:
-        pass
+    def update_stock_pricing(self, start_date: str | None , end_date: str | None) -> None:
+        download_params = {"period": "1y"}
 
-    def update_stock_pricing(self) -> None:
-        pass
+        if start_date is not None and end_date is not None:
+            download_params = {"start": start_date, "end": end_date}
 
-    def ingest(self) -> None:
+        download_df: DataFrame = download(self.monikers, **download_params)
+
+        adj_close_df = download_df["Adj Close"]
+
+        with Session(engine) as session:
+            for moniker in self.monikers:
+                stock_prices_series = adj_close_df[moniker]
+
+                prices = [
+                    Price(
+                        stock=self.stocks_by_moniker[moniker],
+                        date=price_date,
+                        amount=price_amount,
+                    )
+                    for price_date, price_amount in zip(stock_prices_series.index, stock_prices_series.to_list())
+                ]
+
+                session.add_all(prices)
+
+            try:
+                session.commit()
+            except IntegrityError:
+                print("Already have prices. Should implement a real UPSERT.")
+
+    def ingest(self, start_date: datetime | None = None, end_date: datetime | None = None) -> None:
         self.update_stock_info()
-
-        # for moniker in self.monikers:
-        #     ticker = Ticker(moniker)
-        #     # Fund data and holdings
-        #     # ticker.fund_data.sector_weightings
-        #
-        #     with open(f"{moniker}.json", "w") as file:
-        #           file.write(json.dumps(ticker.funds_data.sector_weightings))
-
-        # Download pricing data
-        # data: DataFrame = download(self.monikers, period="1y")
-        #
-        # with open("download.csv", "w") as file:
-        #     file.write(data.to_csv())
+        self.update_stock_pricing(start_date, end_date)

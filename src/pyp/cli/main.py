@@ -4,12 +4,14 @@ from pyp.database.engine import engine
 from pyp.database.models import Base
 from .ingest import ingest
 from .plot import plot
+from .currencies import currency_app
 from .portfolio import portfolio_app
 from .user import user_app
 
 app = Typer()
 app.add_typer(ingest)
 app.add_typer(plot)
+app.add_typer(currency_app)
 app.add_typer(user_app)
 app.add_typer(portfolio_app)
 
