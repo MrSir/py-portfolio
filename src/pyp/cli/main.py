@@ -2,9 +2,9 @@ from typer import Typer
 
 from pyp.database.engine import engine
 from pyp.database.models import Base
+from .currencies import currency_app
 from .ingest import ingest
 from .plot import plot
-from .currencies import currency_app
 from .portfolio import portfolio_app
 from .user import user_app
 

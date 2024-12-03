@@ -57,7 +57,7 @@ class IngestStocks:
 
                 session.commit()
 
-    def update_stock_pricing(self, start_date: str | None , end_date: str | None) -> None:
+    def update_stock_pricing(self, start_date: str | None, end_date: str | None) -> None:
         download_params = {"period": "1y"}
 
         if start_date is not None and end_date is not None:

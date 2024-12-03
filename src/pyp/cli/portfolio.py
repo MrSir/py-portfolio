@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 
 import typer
@@ -6,7 +7,7 @@ from sqlalchemy.orm import Session
 from typer import Typer
 
 from pyp.database.engine import engine
-from pyp.database.models import User, Portfolio, Stock
+from pyp.database.models import User, Portfolio, Stock, PortfolioStocks, Share
 
 portfolio_app = Typer(name="portfolio", help="Manage portfolio DB entities.")
 
@@ -53,5 +54,34 @@ def remove(ctx: typer.Context, moniker: Annotated[str, typer.Argument(help="The 
         stock: Stock = session.scalars(select(Stock).where(Stock.moniker == moniker)).first()
 
         portfolio.stocks.remove(stock)
+
+        session.commit()
+
+
+@portfolio_app.command(name="add-shares", help="Add shares for a moniker to the portfolio.")
+def add_shares(
+    ctx: typer.Context,
+    moniker: Annotated[str, typer.Argument(help="The moniker.")],
+    amount: Annotated[float, typer.Argument(help="The amount of shares.")],
+    price: Annotated[float, typer.Argument(help="The price paid for the shares.")],
+    purchased_on: Annotated[datetime, typer.Argument(metavar="YYYY-MM-DD", help="The date of purchase of the shares.")],
+) -> None:
+    with Session(engine) as session:
+        portfolio: Portfolio = ctx.obj["portfolio"]
+        session.add(portfolio)
+
+        portfolio_stocks: PortfolioStocks = session.scalars(
+            select(PortfolioStocks)
+            .where(PortfolioStocks.portfolio == portfolio)
+            .where(PortfolioStocks.stock.has(Stock.moniker == moniker))
+        ).first()
+
+        portfolio_stocks.shares.append(
+            Share(
+                amount=amount,
+                price=price,
+                purchased_on=purchased_on,
+            )
+        )
 
         session.commit()

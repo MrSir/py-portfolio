@@ -1,12 +1,11 @@
 from typing import Annotated
 
 import typer
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typer import Typer
 
 from pyp.database.engine import engine
-from pyp.database.models import User, Portfolio, Stock, Currency
+from pyp.database.models import Currency
 
 currency_app = Typer(name="currencies", help="Manage currency DB entities.")
 

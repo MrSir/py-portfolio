@@ -1,7 +1,6 @@
-import enum
 from datetime import datetime
 
-from sqlalchemy import String, ForeignKey, UniqueConstraint, Date, Column, Double, Enum
+from sqlalchemy import String, ForeignKey, UniqueConstraint, Date, Double, Enum
 from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped, relationship
 
 
@@ -67,11 +66,27 @@ class PortfolioStocks(Base):
 
     portfolio: Mapped["Portfolio"] = relationship(back_populates="portfolio_stocks", viewonly=True)
     stock: Mapped["Stock"] = relationship(back_populates="portfolio_stocks", viewonly=True)
+    shares: Mapped[list["Share"]] = relationship(back_populates="portfolio_stocks", cascade="all, delete-orphan")
 
     __table_args__ = (UniqueConstraint("portfolio_id", "stock_id", name="p_s_index"),)
 
     def __repr__(self) -> str:
         return f"PortfolioStock(id={self.id!r}, portfolio_id={self.portfolio_id!r}, stock_id={self.stock_id!r})"
+
+
+class Share(Base):
+    __tablename__ = "shares"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    portfolio_stocks_id: Mapped[int] = mapped_column(ForeignKey("portfolio_stocks.id"))
+    amount: Mapped[float] = mapped_column(Double())
+    price: Mapped[float] = mapped_column(Double())
+    purchased_on: Mapped[datetime] = mapped_column(Date())
+
+    portfolio_stocks: Mapped["PortfolioStocks"] = relationship(back_populates="shares", viewonly=True)
+
+    def __repr__(self) -> str:
+        return f"Shares(id={self.id!r}, portfolio_stocks_id={self.portfolio_stocks_id!r}, shares={self.shares!r}, purchased_for={self.purchased_for!r}, purchased_on={self.purchased_on!r})"
 
 
 class Price(Base):
@@ -86,6 +101,9 @@ class Price(Base):
 
     __table_args__ = (UniqueConstraint("stock_id", "date", name="s_d_index"),)
 
+    def __repr__(self) -> str:
+        return f"Price(id={self.id!r}, stock_id={self.stock_id!r}, date={self.date!r}, amount={self.amount!r})"
+
 
 class Currency(Base):
     __tablename__ = "currencies"
@@ -95,3 +113,6 @@ class Currency(Base):
     full_name: Mapped[str] = mapped_column(String(256), nullable=True)
 
     stocks: Mapped[list["Stock"]] = relationship(back_populates="currency", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:
+        return f"Currency(id={self.id!r}, name={self.name!r}, full_name={self.full_name!r})"
