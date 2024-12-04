@@ -7,7 +7,7 @@ from typer import Typer
 from pyp.database.engine import engine
 from pyp.database.models import Currency
 
-currency_app = Typer(name="currencies", help="Manage currency DB entities.")
+currency_app = Typer(name="currency", help="Manage currency DB entities.")
 
 
 @currency_app.command(name="add", help="Add a moniker to the portfolio.")

@@ -42,7 +42,7 @@ class Stock(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     currency_id: Mapped[int] = mapped_column(ForeignKey("currencies.id"), nullable=True)
-    stock_type: Mapped[str] = mapped_column(Enum("ETF", "Stock", "REIT"), nullable=True)
+    stock_type: Mapped[str] = mapped_column(Enum("ETF", "EQUITY", "REIT"), nullable=True)
     moniker: Mapped[str] = mapped_column(String(10), unique=True)
     name: Mapped[str] = mapped_column(String(256), nullable=True)
     description: Mapped[str] = mapped_column(String(256), nullable=True)

@@ -11,8 +11,8 @@ from pyp.database.models import User, Portfolio
 user_app = Typer(name="user", help="Manage user DB entities.")
 
 
-@user_app.command(name="create", help="Creates a new user in the system.")
-def create(username: Annotated[str, typer.Argument(help="The username of the user.")]) -> None:
+@user_app.command(name="add", help="Creates a new user in the system.")
+def add(username: Annotated[str, typer.Argument(help="The username of the user.")]) -> None:
     with Session(engine) as session:
         user = User(username=username)
 
@@ -21,8 +21,8 @@ def create(username: Annotated[str, typer.Argument(help="The username of the use
         session.commit()
 
 
-@user_app.command(name="create-portfolio", help="Creates a portfolio for a specific user.")
-def create_portfolio(
+@user_app.command(name="add-portfolio", help="Creates a portfolio for a specific user.")
+def add_portfolio(
     username: Annotated[str, typer.Argument(help="The username of the user.")],
     name: Annotated[str, typer.Argument(help="The portfolio name.")],
 ) -> None:

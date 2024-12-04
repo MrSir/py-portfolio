@@ -27,7 +27,7 @@ def callback(
         ctx.obj = {"user": user, "portfolio": portfolio}
 
 
-@portfolio_app.command(name="add-moniker", help="Add a moniker to the portfolio.")
+@portfolio_app.command(name="add", help="Add a moniker to the portfolio.")
 def add(ctx: typer.Context, moniker: Annotated[str, typer.Argument(help="The moniker.")]) -> None:
     with Session(engine) as session:
         portfolio: Portfolio = ctx.obj["portfolio"]
@@ -45,7 +45,7 @@ def add(ctx: typer.Context, moniker: Annotated[str, typer.Argument(help="The mon
         session.commit()
 
 
-@portfolio_app.command(name="delete-moniker", help="Delete a moniker from the portfolio.")
+@portfolio_app.command(name="delete", help="Delete a moniker from the portfolio.")
 def remove(ctx: typer.Context, moniker: Annotated[str, typer.Argument(help="The moniker.")]) -> None:
     with Session(engine) as session:
         portfolio: Portfolio = ctx.obj["portfolio"]

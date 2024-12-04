@@ -50,7 +50,15 @@ class IngestStocks:
                 stock.stock_type = info["quoteType"]
                 stock.name = info["longName"]
                 stock.description = info["longBusinessSummary"]
-                stock.sector_weightings = json.dumps(ticker.funds_data.sector_weightings)
+
+                match info["quoteType"]:
+                    case "EQUITY":
+                        stock.sector_weightings = json.dumps({info["sectorKey"]: 1.0})
+                    case "ETF":
+                        if ticker.funds_data.sector_weightings:
+                            stock.sector_weightings = json.dumps(ticker.funds_data.sector_weightings)
+                        else:
+                            stock.sector_weightings = json.dumps({info["category"].replace(" ", "_").lower(): 1.0})
 
                 stock.currency = self.currencies[info["currency"]]
 
@@ -64,11 +72,11 @@ class IngestStocks:
 
         download_df: DataFrame = download(self.monikers, **download_params)
 
-        adj_close_df = download_df["Adj Close"]
+        adj_close_series = download_df["Adj Close"].dropna()
 
         with Session(engine) as session:
             for moniker in self.monikers:
-                stock_prices_series = adj_close_df[moniker]
+                stock_prices_series = adj_close_series[moniker]
 
                 prices = [
                     Price(
