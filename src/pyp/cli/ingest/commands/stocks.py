@@ -33,12 +33,11 @@ class IngestStocks:
         return [stock.moniker for stock in self.stocks]
 
     @cached_property
-    def currencies(self) -> Sequence[Currency]:
+    def currencies(self) -> dict[str, Currency]:
         with Session(engine) as session:
             currencies = session.scalars(select(Currency)).all()
 
-        return currencies
-
+        return {c.name: c for c in currencies}
 
     def update_stock_info(self) -> None:
         with Session(engine) as session:
@@ -53,7 +52,7 @@ class IngestStocks:
                 stock.description = info["longBusinessSummary"]
                 stock.sector_weightings = json.dumps(ticker.funds_data.sector_weightings)
 
-                stock.currency = next(iter([c for c in self.currencies if c.name == info["currency"]]), None)
+                stock.currency = self.currencies[info["currency"]]
 
                 session.commit()
 
@@ -87,6 +86,6 @@ class IngestStocks:
             except IntegrityError:
                 print("Already have prices. Should implement a real UPSERT.")
 
-    def ingest(self, start_date: datetime | None = None, end_date: datetime | None = None) -> None:
+    def ingest(self, start_date: str | None = None, end_date: str | None = None) -> None:
         self.update_stock_info()
         self.update_stock_pricing(start_date, end_date)

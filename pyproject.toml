@@ -18,6 +18,7 @@ mypy = "^1.13.0"
 pytest = "^8.3.3"
 pytest-mock = "^3.14.0"
 pre-commit = "^4.0.1"
+pandas-stubs = "^2.2.3.241126"
 
 [tool.poetry.scripts]
 pyp = "pyp.cli.main:app"
@@ -29,6 +30,15 @@ preview = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+files = "**/*.py"
+
+[[tool.mypy.overrides]]
+module = [
+    "yfinance"
+]
+ignore_missing_imports = true
 
 [build-system]
 requires = ["poetry-core"]

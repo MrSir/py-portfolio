@@ -46,7 +46,7 @@ class Stock(Base):
     moniker: Mapped[str] = mapped_column(String(10), unique=True)
     name: Mapped[str] = mapped_column(String(256), nullable=True)
     description: Mapped[str] = mapped_column(String(256), nullable=True)
-    sector_weightings: Mapped[dict] = mapped_column(String(256), nullable=True)
+    sector_weightings: Mapped[str] = mapped_column(String(256), nullable=True)
 
     currency: Mapped["Currency"] = relationship(back_populates="stocks")
     portfolios: Mapped[list["Portfolio"]] = relationship(secondary="portfolio_stocks", back_populates="stocks")
@@ -86,7 +86,7 @@ class Share(Base):
     portfolio_stocks: Mapped["PortfolioStocks"] = relationship(back_populates="shares", viewonly=True)
 
     def __repr__(self) -> str:
-        return f"Shares(id={self.id!r}, portfolio_stocks_id={self.portfolio_stocks_id!r}, shares={self.shares!r}, purchased_for={self.purchased_for!r}, purchased_on={self.purchased_on!r})"
+        return f"Shares(id={self.id!r}, portfolio_stocks_id={self.portfolio_stocks_id!r}, amount={self.amount!r}, price={self.price!r}, purchased_on={self.purchased_on!r})"
 
 
 class Price(Base):

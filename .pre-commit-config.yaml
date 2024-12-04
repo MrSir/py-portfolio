@@ -1,8 +1,13 @@
-#repos:
-#  - repo: local
-#    hooks:
-#      - id: lint
-#        name: lint files
-#        entry: ruff format --config pyproject.toml -q
-#        language: fail
-#        files: '.*(\.py)$'
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: lint files
+        entry: poetry run ruff format --config pyproject.toml
+        language: python
+        files: '.*(\.py)$'
+      - id: mypy
+        name: verify typing
+        entry: poetry run mypy
+        language: python
+        files: '.*(\.py)$'

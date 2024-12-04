@@ -33,7 +33,7 @@ def add(ctx: typer.Context, moniker: Annotated[str, typer.Argument(help="The mon
         portfolio: Portfolio = ctx.obj["portfolio"]
         session.add(portfolio)
 
-        stock: Stock = session.scalars(select(Stock).where(Stock.moniker == moniker)).first()
+        stock = session.scalars(select(Stock).where(Stock.moniker == moniker)).first()
 
         if stock is None:
             stock = Stock(moniker=moniker)
@@ -51,7 +51,7 @@ def remove(ctx: typer.Context, moniker: Annotated[str, typer.Argument(help="The 
         portfolio: Portfolio = ctx.obj["portfolio"]
         session.add(portfolio)
 
-        stock: Stock = session.scalars(select(Stock).where(Stock.moniker == moniker)).first()
+        stock = session.scalars(select(Stock).where(Stock.moniker == moniker)).one()
 
         portfolio.stocks.remove(stock)
 
@@ -70,11 +70,11 @@ def add_shares(
         portfolio: Portfolio = ctx.obj["portfolio"]
         session.add(portfolio)
 
-        portfolio_stocks: PortfolioStocks = session.scalars(
+        portfolio_stocks = session.scalars(
             select(PortfolioStocks)
             .where(PortfolioStocks.portfolio == portfolio)
             .where(PortfolioStocks.stock.has(Stock.moniker == moniker))
-        ).first()
+        ).one()
 
         portfolio_stocks.shares.append(
             Share(
