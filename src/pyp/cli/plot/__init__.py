@@ -7,7 +7,7 @@ from typer import Typer
 
 from pyp.cli.plot.commands.breakdown import PlotBreakdown
 from pyp.database.engine import engine
-from pyp.database.models import User, Portfolio
+from pyp.database.models import Portfolio, User
 
 plot_app = Typer(name="plot", help="Plot various charts of the portfolio.")
 

@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from pandas import DataFrame
 from pytest_mock import MockFixture
 from sqlalchemy import Selectable
 
@@ -31,20 +32,26 @@ def test_db_query_property(command: PlotBreakdown) -> None:
 
     assert isinstance(db_query, Selectable)
 
-    query = """SELECT 
-        stocks.moniker, 
-        stocks.stock_type, 
-        stocks.sector_weightings, 
-        shares.amount, 
-        shares.price, 
-        shares.purchased_on, 
-        currencies.name AS currency 
-    FROM shares 
-    JOIN portfolio_stocks ON portfolio_stocks.id = shares.portfolio_stocks_id 
-    JOIN stocks ON stocks.id = portfolio_stocks.stock_id 
-    JOIN currencies ON currencies.id = stocks.currency_id 
+    query = """SELECT
+        stocks.moniker,
+        stocks.stock_type,
+        stocks.sector_weightings,
+        shares.amount,
+        shares.price,
+        shares.purchased_on,
+        currencies.name AS currency
+    FROM shares
+    JOIN portfolio_stocks ON portfolio_stocks.id = shares.portfolio_stocks_id
+    JOIN stocks ON stocks.id = portfolio_stocks.stock_id
+    JOIN currencies ON currencies.id = stocks.currency_id
     WHERE portfolio_stocks.portfolio_id = :portfolio_id_1"""
 
-    expected_query = query.replace("\n        ", "").replace("\n    ", "")
+    expected_query = query.replace("\n        ", " ").replace("\n    ", " ")
 
     assert expected_query == str(db_query).replace("\n", "")
+
+
+def test_db_data_df_property(command: PlotBreakdown) -> None:
+    expected_df = DataFrame()
+
+    assert expected_df.equals(command.db_data_df)

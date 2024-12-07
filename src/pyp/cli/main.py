@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from sqlalchemy.orm import Session
@@ -6,6 +6,7 @@ from typer import Typer
 
 from pyp.database.engine import engine
 from pyp.database.models import Base, Currency
+
 from .currencies import currency_app
 from .ingest import ingest
 from .plot import plot_app

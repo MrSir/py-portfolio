@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typer import Typer
 
 from pyp.database.engine import engine
-from pyp.database.models import User, Portfolio
+from pyp.database.models import Portfolio, User
 
 user_app = Typer(name="user", help="Manage user DB entities.")
 

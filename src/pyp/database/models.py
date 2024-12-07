@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import String, ForeignKey, UniqueConstraint, Date, Double, Enum
-from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped, relationship
+from sqlalchemy import Date, Double, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -86,7 +86,10 @@ class Share(Base):
     portfolio_stocks: Mapped["PortfolioStocks"] = relationship(back_populates="shares", viewonly=True)
 
     def __repr__(self) -> str:
-        return f"Shares(id={self.id!r}, portfolio_stocks_id={self.portfolio_stocks_id!r}, amount={self.amount!r}, price={self.price!r}, purchased_on={self.purchased_on!r})"
+        return (
+            f"Shares(id={self.id!r}, portfolio_stocks_id={self.portfolio_stocks_id!r}, amount={self.amount!r}, "
+            f"price={self.price!r}, purchased_on={self.purchased_on!r})"
+        )
 
 
 class Price(Base):

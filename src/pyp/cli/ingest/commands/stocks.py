@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 from functools import cached_property
 from typing import Sequence
 
@@ -10,7 +9,7 @@ from sqlalchemy.orm import Session
 from yfinance import Ticker, download
 
 from pyp.database.engine import engine
-from pyp.database.models import Stock, Currency, Price
+from pyp.database.models import Currency, Price, Stock
 
 
 class IngestStocks:

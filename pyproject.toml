@@ -29,6 +29,7 @@ src = ["src", "tests"]
 preview = true
 
 [tool.ruff.lint]
+extend-select = ["I"]
 select = ["E", "F", "I", "W"]
 
 [tool.mypy]
