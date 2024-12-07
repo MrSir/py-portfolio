@@ -4,8 +4,10 @@ import pytest
 from pandas import DataFrame
 from pytest_mock import MockFixture
 from sqlalchemy import Selectable
+from sqlalchemy.orm import Session
 
 from pyp.cli.plot.commands.breakdown import PlotBreakdown
+from pyp.database.engine import engine
 from pyp.database.models import Portfolio
 
 
@@ -51,7 +53,23 @@ def test_db_query_property(command: PlotBreakdown) -> None:
     assert expected_query == str(db_query).replace("\n", "")
 
 
-def test_db_data_df_property(command: PlotBreakdown) -> None:
-    expected_df = DataFrame()
+def test_db_data_df_property(command: PlotBreakdown, mocker: MockFixture) -> None:
+    mock_session_bind = mocker.MagicMock()
+    mock_session = mocker.MagicMock()
+    mock_session.bind = mock_session_bind
+    mock_session_class = mocker.MagicMock(spec=Session)
+    mock_session_class.return_value.__enter__.return_value = mock_session
+    mocker.patch("pyp.cli.plot.commands.breakdown.Session", mock_session_class)
 
-    assert expected_df.equals(command.db_data_df)
+    mock_read_sql = mocker.MagicMock(return_value=DataFrame())
+    mocker.patch("pyp.cli.plot.commands.breakdown.pd.read_sql", mock_read_sql)
+
+    db_query = Selectable()
+    mock_property = mocker.PropertyMock(return_value=db_query)
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.db_query", mock_property)
+
+    db_data_df = command.db_data_df
+    assert isinstance(db_data_df, DataFrame)
+
+    mock_session_class.assert_called_once_with(engine)
+    mock_read_sql.assert_called_once_with(db_query, mock_session_bind)

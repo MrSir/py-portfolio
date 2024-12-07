@@ -1,8 +1,12 @@
 from functools import cached_property
+from typing import cast
 
+import pandas as pd
 from pandas import DataFrame
-from sqlalchemy import Selectable, select
+from sqlalchemy import Connection, Selectable, select
+from sqlalchemy.orm import Session
 
+from pyp.database.engine import engine
 from pyp.database.models import Currency, Portfolio, PortfolioStocks, Share, Stock
 
 
@@ -30,14 +34,10 @@ class PlotBreakdown:
 
     @cached_property
     def db_data_df(self) -> DataFrame:
-        return DataFrame()
+        with Session(engine) as session:
+            db_data_df = pd.read_sql(self.db_query, cast(Connection, session.bind))
 
-        # with Session(engine) as session:
-        #     assert session.bind
-        #
-        #     db_data_df = pd.read_sql(self.db_query, session.bind)
-        #
-        # return db_data_df
+        return db_data_df
 
     def plot(self) -> None:
         pass
