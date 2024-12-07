@@ -7,12 +7,12 @@ from sqlalchemy import Connection, Selectable, select
 from sqlalchemy.orm import Session
 
 from pyp.database.engine import engine
-from pyp.database.models import Currency, Portfolio, PortfolioStocks, Share, Stock
+from pyp.database.models import PortfolioStocks, Share, Stock
 
 
 class PlotBreakdown:
-    def __init__(self, portfolio: Portfolio):
-        self.portfolio = portfolio
+    def __init__(self, portfolio_id: int):
+        self.portfolio_id = portfolio_id
 
     @property
     def db_query(self) -> Selectable:
@@ -23,19 +23,24 @@ class PlotBreakdown:
                 Stock.sector_weightings,
                 Share.amount,
                 Share.price,
-                Share.purchased_on,
-                Currency.name.label("currency"),
             )
             .join(Share.portfolio_stocks)
             .join(PortfolioStocks.stock)
-            .join(Stock.currency)
-            .where(PortfolioStocks.portfolio_id == self.portfolio.id)
+            .where(PortfolioStocks.portfolio_id == self.portfolio_id)
         )
 
     @cached_property
     def db_data_df(self) -> DataFrame:
         with Session(engine) as session:
-            db_data_df = pd.read_sql(self.db_query, cast(Connection, session.bind))
+            db_data_df = pd.read_sql(self.db_query, cast(Connection, session.bind)).astype(
+                dtype={
+                    "moniker": "string",
+                    "stock_type": "string",
+                    "sector_weightings": "string",
+                    "amount": "float64",
+                    "price": "float64",
+                }
+            )
 
         return db_data_df
 
@@ -45,6 +50,10 @@ class PlotBreakdown:
         share_value_df["value"] = share_value_df["amount"] * share_value_df["price"]
 
         return share_value_df.drop(columns=["amount", "price"])
+
+    @property
+    def group_by_moniker_df(self) -> DataFrame:
+        return self.share_value_df.groupby(["moniker", "stock_type", "sector_weightings"]).sum().reset_index()
 
     def plot(self) -> None:
         pass

@@ -25,12 +25,12 @@ def callback(
             .where(Portfolio.user.has(User.username == username))
         ).one()
 
-        ctx.obj = {"portfolio": portfolio}
+        ctx.obj = {"portfolio_id": portfolio.id}
 
 
 @plot_app.command(name="breakdown", help="Plot pie-charts of the portfolio breakdown.")
 def breakdown(ctx: typer.Context) -> None:
-    PlotBreakdown(ctx.obj["portfolio"]).plot()
+    PlotBreakdown(ctx.obj["portfolio_id"]).plot()
 
 
 @plot_app.command(name="growth", help="Plot charts showing the portfolio growth.")

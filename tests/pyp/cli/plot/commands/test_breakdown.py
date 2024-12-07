@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+import json
 
 import pytest
 from pandas import DataFrame
@@ -8,25 +8,45 @@ from sqlalchemy.orm import Session
 
 from pyp.cli.plot.commands.breakdown import PlotBreakdown
 from pyp.database.engine import engine
-from pyp.database.models import Portfolio
 
 
 @pytest.fixture
-def mock_portfolio(mocker: MockFixture) -> MagicMock:
-    mock_portfolio = mocker.MagicMock(Portfolio)
-
-    return mock_portfolio
+def command() -> PlotBreakdown:
+    return PlotBreakdown(1)
 
 
 @pytest.fixture
-def command(mock_portfolio: MagicMock) -> PlotBreakdown:
-    return PlotBreakdown(mock_portfolio)
+def db_data_df() -> DataFrame:
+    return DataFrame(
+        data={
+            "moniker": ["ADP", "SMH", "ADP", "VGT", "SMH", "SMH"],
+            "stock_type": ["EQUITY", "ETF", "EQUITY", "ETF", "ETF", "ETF"],
+            "sector_weightings": [
+                json.dumps({"financials": 1.0}),
+                json.dumps({"technology": 1.0}),
+                json.dumps({"financials": 1.0}),
+                json.dumps({"technology": 1.0}),
+                json.dumps({"technology": 1.0}),
+                json.dumps({"technology": 1.0}),
+            ],
+            "amount": [1.23, 3.4, 0.234, 54.5, 12.3, 0.7],
+            "price": [65.324, 23.566, 123.54, 3555.0, 123.32, 120.23],
+        }
+    ).astype(
+        dtype={
+            "moniker": "string",
+            "stock_type": "string",
+            "sector_weightings": "string",
+            "amount": "float64",
+            "price": "float64",
+        }
+    )
 
 
-def test_initialization(mock_portfolio: MagicMock) -> None:
-    command = PlotBreakdown(mock_portfolio)
+def test_initialization() -> None:
+    command = PlotBreakdown(1)
 
-    assert mock_portfolio == command.portfolio
+    assert 1 == command.portfolio_id
 
 
 def test_db_query_property(command: PlotBreakdown) -> None:
@@ -39,13 +59,10 @@ def test_db_query_property(command: PlotBreakdown) -> None:
         stocks.stock_type,
         stocks.sector_weightings,
         shares.amount,
-        shares.price,
-        shares.purchased_on,
-        currencies.name AS currency
+        shares.price
     FROM shares
     JOIN portfolio_stocks ON portfolio_stocks.id = shares.portfolio_stocks_id
     JOIN stocks ON stocks.id = portfolio_stocks.stock_id
-    JOIN currencies ON currencies.id = stocks.currency_id
     WHERE portfolio_stocks.portfolio_id = :portfolio_id_1"""
 
     expected_query = query.replace("\n        ", " ").replace("\n    ", " ")
@@ -53,7 +70,7 @@ def test_db_query_property(command: PlotBreakdown) -> None:
     assert expected_query == str(db_query).replace("\n", "")
 
 
-def test_db_data_df_property(command: PlotBreakdown, mocker: MockFixture) -> None:
+def test_db_data_df_property(command: PlotBreakdown, db_data_df: DataFrame, mocker: MockFixture) -> None:
     mock_session_bind = mocker.MagicMock()
     mock_session = mocker.MagicMock()
     mock_session.bind = mock_session_bind
@@ -61,7 +78,7 @@ def test_db_data_df_property(command: PlotBreakdown, mocker: MockFixture) -> Non
     mock_session_class.return_value.__enter__.return_value = mock_session
     mocker.patch("pyp.cli.plot.commands.breakdown.Session", mock_session_class)
 
-    mock_read_sql = mocker.MagicMock(return_value=DataFrame())
+    mock_read_sql = mocker.MagicMock(return_value=db_data_df)
     mocker.patch("pyp.cli.plot.commands.breakdown.pd.read_sql", mock_read_sql)
 
     db_query = Selectable()
@@ -74,7 +91,7 @@ def test_db_data_df_property(command: PlotBreakdown, mocker: MockFixture) -> Non
     mock_read_sql.assert_called_once_with(db_query, mock_session_bind)
 
 
-def test_db_data_df_property_caches(command: PlotBreakdown, mocker: MockFixture) -> None:
+def test_db_data_df_property_caches(command: PlotBreakdown, db_data_df: DataFrame, mocker: MockFixture) -> None:
     mock_session_bind = mocker.MagicMock()
     mock_session = mocker.MagicMock()
     mock_session.bind = mock_session_bind
@@ -82,7 +99,7 @@ def test_db_data_df_property_caches(command: PlotBreakdown, mocker: MockFixture)
     mock_session_class.return_value.__enter__.return_value = mock_session
     mocker.patch("pyp.cli.plot.commands.breakdown.Session", mock_session_class)
 
-    mock_read_sql = mocker.MagicMock(return_value=DataFrame())
+    mock_read_sql = mocker.MagicMock(return_value=db_data_df)
     mocker.patch("pyp.cli.plot.commands.breakdown.pd.read_sql", mock_read_sql)
 
     db_query = Selectable()
@@ -96,20 +113,33 @@ def test_db_data_df_property_caches(command: PlotBreakdown, mocker: MockFixture)
     mock_read_sql.assert_called_once_with(db_query, mock_session_bind)
 
 
-def test_shave_value_df_property(command: PlotBreakdown, mocker: MockFixture) -> None:
-    db_data_df = DataFrame(
-        data={
-            "amount": [1.23, 3.4, 0.234],
-            "price": [65.324, 23.566, 123.54],
-        }
-    )
+def test_share_value_df_property(command: PlotBreakdown, db_data_df: DataFrame, mocker: MockFixture) -> None:
     mock_property = mocker.PropertyMock(return_value=db_data_df)
     mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.db_data_df", mock_property)
 
-    expected_share_value_df = DataFrame(data={"value": []})
-    expected_share_value_df["value"] = db_data_df["amount"] * db_data_df["price"]
+    expected_share_value_df = db_data_df.copy(deep=True)
+    expected_share_value_df["value"] = expected_share_value_df["amount"] * expected_share_value_df["price"]
+    expected_share_value_df = expected_share_value_df.drop(columns=["amount", "price"])
 
     share_value_df = command.share_value_df
 
     assert isinstance(share_value_df, DataFrame)
     assert expected_share_value_df.equals(share_value_df)
+
+
+def test_group_by_moniker_df_property(command: PlotBreakdown, db_data_df: DataFrame, mocker: MockFixture) -> None:
+    share_value_df = db_data_df.copy(deep=True)
+    share_value_df["value"] = share_value_df["amount"] * share_value_df["price"]
+    share_value_df = share_value_df.drop(columns=["amount", "price"])
+
+    mock_property = mocker.PropertyMock(return_value=share_value_df)
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.share_value_df", mock_property)
+
+    expected_group_by_moniker_df = (
+        share_value_df.groupby(["moniker", "stock_type", "sector_weightings"]).sum().reset_index()
+    )
+
+    group_by_moniker_df = command.group_by_moniker_df
+
+    assert isinstance(group_by_moniker_df, DataFrame)
+    assert expected_group_by_moniker_df.equals(group_by_moniker_df)
