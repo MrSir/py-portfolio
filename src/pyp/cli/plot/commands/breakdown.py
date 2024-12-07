@@ -1,12 +1,12 @@
-from typing import Sequence
+from functools import cached_property
 
 import pandas as pd
 from pandas import DataFrame
-from sqlalchemy import select
+from sqlalchemy import select, Selectable
 from sqlalchemy.orm import Session
 
 from pyp.database.engine import engine
-from pyp.database.models import Portfolio, Share, PortfolioStocks, Stock
+from pyp.database.models import Portfolio, Share, PortfolioStocks, Stock, Currency
 
 
 class PlotBreakdown:
@@ -14,69 +14,31 @@ class PlotBreakdown:
         self.portfolio = portfolio
 
     @property
-    def shares_df(self) -> DataFrame:
+    def db_query(self) -> Selectable:
+        return (
+            select(
+                Stock.moniker,
+                Stock.stock_type,
+                Stock.sector_weightings,
+                Share.amount,
+                Share.price,
+                Share.purchased_on,
+                Currency.name.label("currency"),
+            )
+            .join(Share.portfolio_stocks)
+            .join(PortfolioStocks.stock)
+            .join(Stock.currency)
+            .where(PortfolioStocks.portfolio_id == self.portfolio.id)
+        )
+
+    @cached_property
+    def db_data_df(self) -> DataFrame:
         with Session(engine) as session:
-            session.add(self.portfolio)
-
-            query = select(Share).where(Share.portfolio_stocks.has(PortfolioStocks.portfolio == self.portfolio))
-
             assert session.bind
 
-            shares_df = pd.read_sql(query, session.bind)
+            db_data_df = pd.read_sql(self.db_query, session.bind)
 
-        return shares_df
-
-    @property
-    def portfolio_stocks_df(self) -> DataFrame:
-        with Session(engine) as session:
-            session.add(self.portfolio)
-
-            query = select(PortfolioStocks).where(PortfolioStocks.portfolio == self.portfolio)
-
-            assert session.bind
-
-            portfolio_stocks_df = pd.read_sql(query, session.bind)
-
-        return portfolio_stocks_df
-
-    @property
-    def stocks_df(self) -> DataFrame:
-        with Session(engine) as session:
-            session.add(self.portfolio)
-
-            query = select(Stock).where(Stock.portfolio_stocks.any(PortfolioStocks.portfolio == self.portfolio))
-
-            assert session.bind
-
-            stocks_df = pd.read_sql(query, session.bind)
-
-        return stocks_df
-
-    @property
-    def combined_df(self) -> DataFrame:
-        combined_df = self.shares_df.merge(
-            self.portfolio_stocks_df,
-            left_on="portfolio_stocks_id",
-            right_on="id",
-        ).drop(columns=["id_x", "id_y", "portfolio_stocks_id"])
-
-        combined_df = combined_df.merge(
-            self.stocks_df,
-            left_on="stock_id",
-            right_on="id",
-        ).drop(columns=["portfolio_id", "stock_id", "id", "purchased_on", "name", "description"])
-
-        combined_df["value"] = combined_df["amount"] * combined_df["price"]
-
-        combined_df = combined_df.drop(columns=["amount", "price"])
-
-        return combined_df
-
-    @property
-    def stock_type_df(self) -> DataFrame:
-        stock_type_df = self.combined_df.drop(columns=["sector_weightings", "moniker"])
-
-        return stock_type_df.groupby("stock_type").agg("sum")
+        return db_data_df
 
     def plot(self) -> None:
-        print(self.stock_type_df)
+        pass

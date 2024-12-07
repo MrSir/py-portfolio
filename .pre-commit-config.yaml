@@ -5,9 +5,9 @@ repos:
         name: lint files
         entry: poetry run ruff format --config pyproject.toml
         language: python
-        files: '.*(\.py)$'
+        files: '(src|tests)/.*\.py$'
       - id: mypy
         name: verify typing
-        entry: poetry run mypy
+        entry: poetry run mypy --config-file=./pyproject.toml
         language: python
         files: '.*(\.py)$'
