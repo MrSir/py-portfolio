@@ -39,5 +39,12 @@ class PlotBreakdown:
 
         return db_data_df
 
+    @property
+    def share_value_df(self) -> DataFrame:
+        share_value_df = self.db_data_df.copy(deep=True)
+        share_value_df["value"] = share_value_df["amount"] * share_value_df["price"]
+
+        return share_value_df.drop(columns=["amount", "price"])
+
     def plot(self) -> None:
         pass
