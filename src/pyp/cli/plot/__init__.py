@@ -1,4 +1,5 @@
-from typing import Annotated
+from pathlib import Path
+from typing import Annotated, Optional
 
 import typer
 from sqlalchemy import select
@@ -29,8 +30,11 @@ def callback(
 
 
 @plot_app.command(name="breakdown", help="Plot pie-charts of the portfolio breakdown.")
-def breakdown(ctx: typer.Context) -> None:
-    PlotBreakdown(ctx.obj["portfolio_id"]).plot()
+def breakdown(
+    ctx: typer.Context,
+    output_dir: Annotated[Optional[Path], typer.Option(help="The path to write the resulting json data files.")] = None,
+) -> None:
+    PlotBreakdown(ctx.obj["portfolio_id"], output_dir=output_dir).plot()
 
 
 @plot_app.command(name="growth", help="Plot charts showing the portfolio growth.")

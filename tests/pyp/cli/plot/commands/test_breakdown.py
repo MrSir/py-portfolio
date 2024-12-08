@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+from unittest.mock import call
 
 import pytest
 from pandas import DataFrame
@@ -12,7 +14,7 @@ from pyp.database.engine import engine
 
 @pytest.fixture
 def command() -> PlotBreakdown:
-    return PlotBreakdown(1)
+    return PlotBreakdown(1, output_dir=Path(__file__).parent)
 
 
 @pytest.fixture
@@ -29,8 +31,8 @@ def db_data_df() -> DataFrame:
                 json.dumps({"technology": 1.0}),
                 json.dumps({"technology": 1.0}),
             ],
-            "amount": [1.23, 3.4, 0.234, 54.5, 12.3, 0.7],
-            "price": [65.324, 23.566, 123.54, 3555.0, 123.32, 120.23],
+            "amount": [1.23, 3.4, 0.234, 5.5, 12.3, 0.7],
+            "price": [65.324, 23.566, 123.54, 355.0, 123.32, 120.23],
         }
     ).astype(
         dtype={
@@ -72,10 +74,20 @@ def percent_by_moniker_df(expand_by_sector_df: DataFrame) -> DataFrame:
     return df.drop(columns=["value", "total_value"])
 
 
+@pytest.fixture
+def moniker_breakdown_df(percent_by_moniker_df: DataFrame) -> DataFrame:
+    df = percent_by_moniker_df.copy(deep=True)
+
+    return df[["moniker", "percent"]]
+
+
 def test_initialization() -> None:
-    command = PlotBreakdown(1)
+    output_dir = Path(__file__).parent
+    command = PlotBreakdown(1, output_dir=output_dir)
 
     assert 1 == command.portfolio_id
+    assert output_dir == command.output_dir
+    assert command.show is False
 
 
 def test_db_query_property(command: PlotBreakdown) -> None:
@@ -223,7 +235,7 @@ def test_stock_type_breakdown_df_property(
     mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.percent_by_moniker_df", mock_property)
 
     df = percent_by_moniker_df.copy(deep=True)
-    df = df[["stock_type", "percent"]].groupby("stock_type").sum()
+    df = df[["stock_type", "percent"]].groupby("stock_type").sum().reset_index()
 
     percent_by_moniker_df = command.stock_type_breakdown_df
 
@@ -241,9 +253,79 @@ def test_sector_breakdown_df_property(
     df = df.drop(columns=["moniker", "stock_type"])
     df_minus_percent = df.drop(columns="percent")
     df = df_minus_percent.multiply(df["percent"], axis="index")
-    df = df.sum().to_frame().reset_index().rename(columns={"index": "sector", 0: "percent"}).set_index("sector")
+    df = df.sum().to_frame().reset_index().rename(columns={"index": "sector", 0: "percent"})
 
     percent_by_moniker_df = command.sector_breakdown_df
 
     assert isinstance(percent_by_moniker_df, DataFrame)
     assert df.equals(percent_by_moniker_df)
+
+
+def test_writes_json_files(command: PlotBreakdown, mocker: MockFixture) -> None:
+    mock_moniker_breakdown_df = mocker.MagicMock()
+    mock_moniker_breakdown_df.to_json = mocker.MagicMock()
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.moniker_breakdown_df", mock_moniker_breakdown_df)
+    mock_stock_type_breakdown_df = mocker.MagicMock()
+    mock_stock_type_breakdown_df.to_json = mocker.MagicMock()
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.stock_type_breakdown_df", mock_stock_type_breakdown_df)
+    mock_sector_breakdown_df = mocker.MagicMock()
+    mock_sector_breakdown_df.to_json = mocker.MagicMock()
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.sector_breakdown_df", mock_sector_breakdown_df)
+
+    command.write_json_files()
+    assert command.output_dir is not None
+
+    mock_moniker_breakdown_df.to_json.assert_called_once_with(
+        command.output_dir / "moniker_breakdown.json", orient="records"
+    )
+    mock_stock_type_breakdown_df.to_json.assert_called_once_with(
+        command.output_dir / "stock_type_breakdown.json", orient="records"
+    )
+    mock_sector_breakdown_df.to_json.assert_called_once_with(
+        command.output_dir / "sector_breakdown.json", orient="records"
+    )
+
+
+def test_show_breakdowns(command: PlotBreakdown, mocker: MockFixture) -> None:
+    mock_plot = mocker.MagicMock()
+    mock_plot.pie = mocker.MagicMock()
+    mock_moniker_breakdown_df = mocker.MagicMock()
+    mock_moniker_breakdown_df.plot = mock_plot
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.moniker_breakdown_df", mock_moniker_breakdown_df)
+    mock_stock_type_breakdown_df = mocker.MagicMock()
+    mock_stock_type_breakdown_df.plot = mock_plot
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.stock_type_breakdown_df", mock_stock_type_breakdown_df)
+    mock_sector_breakdown_df = mocker.MagicMock()
+    mock_sector_breakdown_df.plot = mock_plot
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.sector_breakdown_df", mock_sector_breakdown_df)
+
+    mock_show = mocker.MagicMock()
+    mocker.patch("pyp.cli.plot.commands.breakdown.plt.show", mock_show)
+
+    command.show_breakdowns()
+
+    mock_plot.pie.assert_has_calls([
+        call(y="percent", labels=mock_moniker_breakdown_df["moniker"], figsize=(5, 5), autopct="%.2f%%"),
+        call(y="percent", labels=mock_stock_type_breakdown_df["stock_type"], figsize=(5, 5), autopct="%.2f%%"),
+        call(y="percent", labels=mock_sector_breakdown_df["sector"], figsize=(5, 5), autopct="%.2f%%"),
+    ])
+    mock_show.assert_called_once()
+
+
+def test_plot_writes_json_files_when_output_dir_is_provided(command: PlotBreakdown, mocker: MockFixture) -> None:
+    mock_write_json_files = mocker.MagicMock()
+    mocker.patch.object(command, "write_json_files", mock_write_json_files)
+
+    command.plot()
+
+    mock_write_json_files.assert_called_once()
+
+
+def test_plot_shows_breakdowns_if_show_flag(command: PlotBreakdown, mocker: MockFixture) -> None:
+    mock_show_breakdowns = mocker.MagicMock()
+    mocker.patch.object(command, "show_breakdowns", mock_show_breakdowns)
+    command.output_dir = None
+
+    command.plot()
+
+    mock_show_breakdowns.assert_called_once()

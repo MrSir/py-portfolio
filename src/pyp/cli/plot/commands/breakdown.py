@@ -1,8 +1,10 @@
 import json
 from functools import cached_property
+from pathlib import Path
 from typing import cast
 
 import pandas as pd
+from matplotlib import pyplot as plt
 from pandas import DataFrame
 from sqlalchemy import Connection, Selectable, select
 from sqlalchemy.orm import Session
@@ -12,8 +14,10 @@ from pyp.database.models import PortfolioStocks, Share, Stock
 
 
 class PlotBreakdown:
-    def __init__(self, portfolio_id: int):
+    def __init__(self, portfolio_id: int, output_dir: Path | None = None):
         self.portfolio_id = portfolio_id
+        self.output_dir = output_dir
+        self.show = self.output_dir is None
 
     @property
     def db_query(self) -> Selectable:
@@ -81,7 +85,7 @@ class PlotBreakdown:
     def stock_type_breakdown_df(self) -> DataFrame:
         df = self.percent_by_moniker_df.copy(deep=True)
 
-        return df[["stock_type", "percent"]].groupby("stock_type").sum()
+        return df[["stock_type", "percent"]].groupby("stock_type").sum().reset_index()
 
     @property
     def sector_breakdown_df(self) -> DataFrame:
@@ -89,9 +93,34 @@ class PlotBreakdown:
         df = df.drop(columns=["moniker", "stock_type"])
         df_minus_percent = df.drop(columns="percent")
         df = df_minus_percent.multiply(df["percent"], axis="index")
-        df = df.sum().to_frame().reset_index().rename(columns={"index": "sector", 0: "percent"}).set_index("sector")
+        df = df.sum().to_frame().reset_index().rename(columns={"index": "sector", 0: "percent"})
 
         return df
 
+    def write_json_files(self) -> None:
+        assert self.output_dir is not None
+
+        self.moniker_breakdown_df.to_json(self.output_dir / "moniker_breakdown.json", orient="records")
+        self.stock_type_breakdown_df.to_json(self.output_dir / "stock_type_breakdown.json", orient="records")
+        self.sector_breakdown_df.to_json(self.output_dir / "sector_breakdown.json", orient="records")
+
+    def show_breakdowns(self) -> None:
+        self.moniker_breakdown_df.plot.pie(
+            y="percent", labels=self.moniker_breakdown_df["moniker"], figsize=(5, 5), autopct="%.2f%%"
+        )
+        self.stock_type_breakdown_df.plot.pie(
+            y="percent", labels=self.stock_type_breakdown_df["stock_type"], figsize=(5, 5), autopct="%.2f%%"
+        )
+        self.sector_breakdown_df.plot.pie(
+            y="percent", labels=self.sector_breakdown_df["sector"], figsize=(5, 5), autopct="%.2f%%"
+        )
+
+        plt.show()
+
     def plot(self) -> None:
-        pass
+        if self.output_dir is not None:
+            self.write_json_files()
+
+            return
+
+        self.show_breakdowns()
