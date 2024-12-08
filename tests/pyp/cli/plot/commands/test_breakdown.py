@@ -36,11 +36,40 @@ def db_data_df() -> DataFrame:
         dtype={
             "moniker": "string",
             "stock_type": "string",
-            "sector_weightings": "string",
+            "sector_weightings": "object",
             "amount": "float64",
             "price": "float64",
         }
     )
+
+
+@pytest.fixture
+def share_value_df(db_data_df: DataFrame) -> DataFrame:
+    df = db_data_df.copy(deep=True)
+    df["value"] = df["amount"] * df["price"]
+
+    return df.drop(columns=["amount", "price"])
+
+
+@pytest.fixture
+def group_by_moniker_df(share_value_df: DataFrame) -> DataFrame:
+    return share_value_df.groupby(["moniker", "stock_type", "sector_weightings"]).sum().reset_index()
+
+
+@pytest.fixture
+def expand_by_sector_df(group_by_moniker_df: DataFrame) -> DataFrame:
+    df = group_by_moniker_df.copy(deep=True)
+    df = df.join(DataFrame(group_by_moniker_df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))
+    return df.drop(columns=["sector_weightings"])
+
+
+@pytest.fixture
+def percent_by_moniker_df(expand_by_sector_df: DataFrame) -> DataFrame:
+    df = expand_by_sector_df.copy(deep=True)
+    df["total_value"] = df["value"].sum()
+    df["percent"] = df["value"] / df["total_value"]
+
+    return df.drop(columns=["value", "total_value"])
 
 
 def test_initialization() -> None:
@@ -117,29 +146,104 @@ def test_share_value_df_property(command: PlotBreakdown, db_data_df: DataFrame, 
     mock_property = mocker.PropertyMock(return_value=db_data_df)
     mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.db_data_df", mock_property)
 
-    expected_share_value_df = db_data_df.copy(deep=True)
-    expected_share_value_df["value"] = expected_share_value_df["amount"] * expected_share_value_df["price"]
-    expected_share_value_df = expected_share_value_df.drop(columns=["amount", "price"])
+    df = db_data_df.copy(deep=True)
+    df["value"] = df["amount"] * df["price"]
+    df = df.drop(columns=["amount", "price"])
 
     share_value_df = command.share_value_df
 
     assert isinstance(share_value_df, DataFrame)
-    assert expected_share_value_df.equals(share_value_df)
+    assert df.equals(share_value_df)
 
 
-def test_group_by_moniker_df_property(command: PlotBreakdown, db_data_df: DataFrame, mocker: MockFixture) -> None:
-    share_value_df = db_data_df.copy(deep=True)
-    share_value_df["value"] = share_value_df["amount"] * share_value_df["price"]
-    share_value_df = share_value_df.drop(columns=["amount", "price"])
-
+def test_group_by_moniker_df_property(command: PlotBreakdown, share_value_df: DataFrame, mocker: MockFixture) -> None:
     mock_property = mocker.PropertyMock(return_value=share_value_df)
     mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.share_value_df", mock_property)
 
-    expected_group_by_moniker_df = (
-        share_value_df.groupby(["moniker", "stock_type", "sector_weightings"]).sum().reset_index()
-    )
+    df = share_value_df.groupby(["moniker", "stock_type", "sector_weightings"]).sum().reset_index()
 
     group_by_moniker_df = command.group_by_moniker_df
 
     assert isinstance(group_by_moniker_df, DataFrame)
-    assert expected_group_by_moniker_df.equals(group_by_moniker_df)
+    assert df.equals(group_by_moniker_df)
+
+
+def test_expand_by_sector_df_property(
+    command: PlotBreakdown, group_by_moniker_df: DataFrame, mocker: MockFixture
+) -> None:
+    mock_property = mocker.PropertyMock(return_value=group_by_moniker_df)
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.group_by_moniker_df", mock_property)
+
+    df = group_by_moniker_df.copy(deep=True)
+    df = df.join(DataFrame(group_by_moniker_df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))
+    df = df.drop(columns=["sector_weightings"])
+
+    expand_by_sector_df = command.expand_by_sector_df
+
+    assert isinstance(expand_by_sector_df, DataFrame)
+    assert df.equals(expand_by_sector_df)
+
+
+def test_percent_by_moniker_df_property(
+    command: PlotBreakdown, expand_by_sector_df: DataFrame, mocker: MockFixture
+) -> None:
+    mock_property = mocker.PropertyMock(return_value=expand_by_sector_df)
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.expand_by_sector_df", mock_property)
+
+    df = expand_by_sector_df.copy(deep=True)
+    df["total_value"] = df["value"].sum()
+    df["percent"] = df["value"] / df["total_value"]
+    df = df.drop(columns=["value", "total_value"])
+
+    percent_by_moniker_df = command.percent_by_moniker_df
+
+    assert isinstance(percent_by_moniker_df, DataFrame)
+    assert df.equals(percent_by_moniker_df)
+
+
+def test_moniker_breakdown_df_property(
+    command: PlotBreakdown, percent_by_moniker_df: DataFrame, mocker: MockFixture
+) -> None:
+    mock_property = mocker.PropertyMock(return_value=percent_by_moniker_df)
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.percent_by_moniker_df", mock_property)
+
+    df = percent_by_moniker_df.copy(deep=True)
+    df = df[["moniker", "percent"]]
+
+    percent_by_moniker_df = command.moniker_breakdown_df
+
+    assert isinstance(percent_by_moniker_df, DataFrame)
+    assert df.equals(percent_by_moniker_df)
+
+
+def test_stock_type_breakdown_df_property(
+    command: PlotBreakdown, percent_by_moniker_df: DataFrame, mocker: MockFixture
+) -> None:
+    mock_property = mocker.PropertyMock(return_value=percent_by_moniker_df)
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.percent_by_moniker_df", mock_property)
+
+    df = percent_by_moniker_df.copy(deep=True)
+    df = df[["stock_type", "percent"]].groupby("stock_type").sum()
+
+    percent_by_moniker_df = command.stock_type_breakdown_df
+
+    assert isinstance(percent_by_moniker_df, DataFrame)
+    assert df.equals(percent_by_moniker_df)
+
+
+def test_sector_breakdown_df_property(
+    command: PlotBreakdown, percent_by_moniker_df: DataFrame, mocker: MockFixture
+) -> None:
+    mock_property = mocker.PropertyMock(return_value=percent_by_moniker_df)
+    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.percent_by_moniker_df", mock_property)
+
+    df = percent_by_moniker_df.copy(deep=True)
+    df = df.drop(columns=["moniker", "stock_type"])
+    df_minus_percent = df.drop(columns="percent")
+    df = df_minus_percent.multiply(df["percent"], axis="index")
+    df = df.sum().to_frame().reset_index().rename(columns={"index": "sector", 0: "percent"}).set_index("sector")
+
+    percent_by_moniker_df = command.sector_breakdown_df
+
+    assert isinstance(percent_by_moniker_df, DataFrame)
+    assert df.equals(percent_by_moniker_df)
