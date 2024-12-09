@@ -1,38 +1,62 @@
 import json
+from datetime import datetime
 from pathlib import Path
-from unittest.mock import call
+from unittest.mock import MagicMock, call
 
+import pandas as pd
 import pytest
 from pandas import DataFrame
 from pytest_mock import MockFixture
 from sqlalchemy import Selectable
-from sqlalchemy.orm import Session
 
 from pyp.cli.plot.commands.breakdown import PlotBreakdown
 from pyp.database.engine import engine
 
 
 @pytest.fixture
-def command() -> PlotBreakdown:
-    return PlotBreakdown(1, output_dir=Path(__file__).parent)
+def command(portfolio_id: int) -> PlotBreakdown:
+    return PlotBreakdown(portfolio_id, datetime(2024, 12, 3), output_dir=Path(__file__).parent)
 
 
 @pytest.fixture
 def db_data_df() -> DataFrame:
     return DataFrame(
         data={
-            "moniker": ["ADP", "SMH", "ADP", "VGT", "SMH", "SMH"],
-            "stock_type": ["EQUITY", "ETF", "EQUITY", "ETF", "ETF", "ETF"],
+            "moniker": ["ADP", "BTCO", "PLTR", "IYK", "RDVY"],
+            "stock_type": ["EQUITY", "ETF", "EQUITY", "ETF", "ETF"],
             "sector_weightings": [
-                json.dumps({"financials": 1.0}),
                 json.dumps({"technology": 1.0}),
-                json.dumps({"financials": 1.0}),
+                json.dumps({"digital_assets": 1.0}),
                 json.dumps({"technology": 1.0}),
-                json.dumps({"technology": 1.0}),
-                json.dumps({"technology": 1.0}),
+                json.dumps({
+                    "realestate": 0.0,
+                    "consumer_cyclical": 0.0076,
+                    "basic_materials": 0.0201,
+                    "consumer_defensive": 0.8869,
+                    "technology": 0.0,
+                    "communication_services": 0.0,
+                    "financial_services": 0.0,
+                    "utilities": 0.0,
+                    "industrials": 0.00029999999,
+                    "energy": 0.0,
+                    "healthcare": 0.0851,
+                }),
+                json.dumps({
+                    "realestate": 0.0,
+                    "consumer_cyclical": 0.0716,
+                    "basic_materials": 0.081099994,
+                    "consumer_defensive": 0.0,
+                    "technology": 0.1965,
+                    "communication_services": 0.038399998,
+                    "financial_services": 0.4108,
+                    "utilities": 0.0,
+                    "industrials": 0.0871,
+                    "energy": 0.0996,
+                    "healthcare": 0.0149,
+                }),
             ],
-            "amount": [1.23, 3.4, 0.234, 5.5, 12.3, 0.7],
-            "price": [65.324, 23.566, 123.54, 355.0, 123.32, 120.23],
+            "amount": [1.782, 11.000, 6.550, 20.447, 43.240],
+            "price": [303.570007, 95.599998, 70.959999, 70.029999, 63.830002],
         }
     ).astype(
         dtype={
@@ -54,14 +78,9 @@ def share_value_df(db_data_df: DataFrame) -> DataFrame:
 
 
 @pytest.fixture
-def group_by_moniker_df(share_value_df: DataFrame) -> DataFrame:
-    return share_value_df.groupby(["moniker", "stock_type", "sector_weightings"]).sum().reset_index()
-
-
-@pytest.fixture
-def expand_by_sector_df(group_by_moniker_df: DataFrame) -> DataFrame:
-    df = group_by_moniker_df.copy(deep=True)
-    df = df.join(DataFrame(group_by_moniker_df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))
+def expand_by_sector_df(share_value_df: DataFrame) -> DataFrame:
+    df = share_value_df.copy(deep=True)
+    df = df.join(DataFrame(share_value_df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))
     return df.drop(columns=["sector_weightings"])
 
 
@@ -81,11 +100,13 @@ def moniker_breakdown_df(percent_by_moniker_df: DataFrame) -> DataFrame:
     return df[["moniker", "percent"]]
 
 
-def test_initialization() -> None:
+def test_initialization(portfolio_id: int) -> None:
     output_dir = Path(__file__).parent
-    command = PlotBreakdown(1, output_dir=output_dir)
+    date = datetime(2024, 12, 9)
+    command = PlotBreakdown(portfolio_id, date, output_dir=output_dir)
 
-    assert 1 == command.portfolio_id
+    assert portfolio_id == command.portfolio_id
+    assert date == command.date
     assert output_dir == command.output_dir
     assert command.show is False
 
@@ -95,28 +116,31 @@ def test_db_query_property(command: PlotBreakdown) -> None:
 
     assert isinstance(db_query, Selectable)
 
-    query = """SELECT
+    query = """SELECT DISTINCT
         stocks.moniker,
         stocks.stock_type,
         stocks.sector_weightings,
-        shares.amount,
-        shares.price
+        sum(shares.amount) AS amount,
+        prices.amount AS price
     FROM shares
     JOIN portfolio_stocks ON portfolio_stocks.id = shares.portfolio_stocks_id
     JOIN stocks ON stocks.id = portfolio_stocks.stock_id
-    WHERE portfolio_stocks.portfolio_id = :portfolio_id_1"""
+    JOIN prices ON stocks.id = prices.stock_id
+    WHERE portfolio_stocks.portfolio_id = :portfolio_id_1
+        AND prices.date = :date_1 GROUP BY shares.portfolio_stocks_id"""
 
     expected_query = query.replace("\n        ", " ").replace("\n    ", " ")
 
     assert expected_query == str(db_query).replace("\n", "")
 
 
-def test_db_data_df_property(command: PlotBreakdown, db_data_df: DataFrame, mocker: MockFixture) -> None:
-    mock_session_bind = mocker.MagicMock()
-    mock_session = mocker.MagicMock()
-    mock_session.bind = mock_session_bind
-    mock_session_class = mocker.MagicMock(spec=Session)
-    mock_session_class.return_value.__enter__.return_value = mock_session
+def test_db_data_df_property(
+    command: PlotBreakdown,
+    db_data_df: DataFrame,
+    mock_session_class: MagicMock,
+    mock_session: MagicMock,
+    mocker: MockFixture,
+) -> None:
     mocker.patch("pyp.cli.plot.commands.breakdown.Session", mock_session_class)
 
     mock_read_sql = mocker.MagicMock(return_value=db_data_df)
@@ -126,18 +150,23 @@ def test_db_data_df_property(command: PlotBreakdown, db_data_df: DataFrame, mock
     mock_property = mocker.PropertyMock(return_value=db_query)
     mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.db_query", mock_property)
 
-    assert isinstance(command.db_data_df, DataFrame)
+    pd.set_option("display.max_rows", None)
+    actual_df = command.db_data_df
+
+    assert isinstance(actual_df, DataFrame)
+    assert db_data_df.equals(actual_df)
 
     mock_session_class.assert_called_once_with(engine)
-    mock_read_sql.assert_called_once_with(db_query, mock_session_bind)
+    mock_read_sql.assert_called_once_with(db_query, mock_session.bind)
 
 
-def test_db_data_df_property_caches(command: PlotBreakdown, db_data_df: DataFrame, mocker: MockFixture) -> None:
-    mock_session_bind = mocker.MagicMock()
-    mock_session = mocker.MagicMock()
-    mock_session.bind = mock_session_bind
-    mock_session_class = mocker.MagicMock(spec=Session)
-    mock_session_class.return_value.__enter__.return_value = mock_session
+def test_db_data_df_property_caches(
+    command: PlotBreakdown,
+    db_data_df: DataFrame,
+    mock_session_class: MagicMock,
+    mock_session: MagicMock,
+    mocker: MockFixture,
+) -> None:
     mocker.patch("pyp.cli.plot.commands.breakdown.Session", mock_session_class)
 
     mock_read_sql = mocker.MagicMock(return_value=db_data_df)
@@ -151,7 +180,7 @@ def test_db_data_df_property_caches(command: PlotBreakdown, db_data_df: DataFram
     assert isinstance(command.db_data_df, DataFrame), "Second time it caches"
 
     mock_session_class.assert_called_once_with(engine)
-    mock_read_sql.assert_called_once_with(db_query, mock_session_bind)
+    mock_read_sql.assert_called_once_with(db_query, mock_session.bind)
 
 
 def test_share_value_df_property(command: PlotBreakdown, db_data_df: DataFrame, mocker: MockFixture) -> None:
@@ -168,26 +197,12 @@ def test_share_value_df_property(command: PlotBreakdown, db_data_df: DataFrame, 
     assert df.equals(share_value_df)
 
 
-def test_group_by_moniker_df_property(command: PlotBreakdown, share_value_df: DataFrame, mocker: MockFixture) -> None:
+def test_expand_by_sector_df_property(command: PlotBreakdown, share_value_df: DataFrame, mocker: MockFixture) -> None:
     mock_property = mocker.PropertyMock(return_value=share_value_df)
     mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.share_value_df", mock_property)
 
-    df = share_value_df.groupby(["moniker", "stock_type", "sector_weightings"]).sum().reset_index()
-
-    group_by_moniker_df = command.group_by_moniker_df
-
-    assert isinstance(group_by_moniker_df, DataFrame)
-    assert df.equals(group_by_moniker_df)
-
-
-def test_expand_by_sector_df_property(
-    command: PlotBreakdown, group_by_moniker_df: DataFrame, mocker: MockFixture
-) -> None:
-    mock_property = mocker.PropertyMock(return_value=group_by_moniker_df)
-    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.group_by_moniker_df", mock_property)
-
-    df = group_by_moniker_df.copy(deep=True)
-    df = df.join(DataFrame(group_by_moniker_df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))
+    df = share_value_df.copy(deep=True)
+    df = df.join(DataFrame(share_value_df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))
     df = df.drop(columns=["sector_weightings"])
 
     expand_by_sector_df = command.expand_by_sector_df

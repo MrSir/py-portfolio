@@ -1,3 +1,4 @@
+from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -6,24 +7,11 @@ from typer import Typer
 from typer.testing import CliRunner
 
 from pyp.cli.plot import PlotBreakdown, plot_app
-from pyp.database.models import Portfolio
 
 
 @pytest.fixture
 def app() -> Typer:
     return plot_app
-
-
-@pytest.fixture
-def portfolio_id() -> int:
-    return 1
-
-
-@pytest.fixture
-def mock_resolve_portfolio(portfolio_id: int, mocker: MockFixture) -> None:
-    mock_resolve_portfolio = mocker.MagicMock(return_value=Portfolio(id=portfolio_id))
-
-    return mock_resolve_portfolio
 
 
 def test_plot_app(app: Typer) -> None:
@@ -69,11 +57,13 @@ def test_breakdown_command(
     mock_class = mocker.MagicMock(spec=PlotBreakdown, return_value=mock_plot_breakdown)
     mocker.patch("pyp.cli.plot.PlotBreakdown", mock_class)
 
-    result = cli_runner.invoke(app, ["Username", "PortfolioName", "breakdown"])
+    date = datetime(2024, 12, 9)
+
+    result = cli_runner.invoke(app, ["Username", "PortfolioName", date.strftime("%Y-%m-%d"), "breakdown"])
 
     assert result.exit_code == 0
 
-    mock_class.assert_called_once_with(portfolio_id, output_dir=None)
+    mock_class.assert_called_once_with(portfolio_id, date, output_dir=None)
     mock_plot_breakdown.plot.assert_called_once()
 
 
@@ -82,7 +72,9 @@ def test_growth_command(
 ) -> None:
     mocker.patch("pyp.cli.plot.resolve_portfolio", mock_resolve_portfolio)
 
-    result = cli_runner.invoke(app, ["Username", "PortfolioName", "growth"])
+    date = datetime(2024, 12, 9)
+
+    result = cli_runner.invoke(app, ["Username", "PortfolioName", date.strftime("%Y-%m-%d"), "growth"])
 
     assert result.exit_code == 0
 
@@ -92,6 +84,8 @@ def test_growth_breakdown_command(
 ) -> None:
     mocker.patch("pyp.cli.plot.resolve_portfolio", mock_resolve_portfolio)
 
-    result = cli_runner.invoke(app, ["Username", "PortfolioName", "growth-breakdown"])
+    date = datetime(2024, 12, 9)
+
+    result = cli_runner.invoke(app, ["Username", "PortfolioName", date.strftime("%Y-%m-%d"), "growth-breakdown"])
 
     assert result.exit_code == 0

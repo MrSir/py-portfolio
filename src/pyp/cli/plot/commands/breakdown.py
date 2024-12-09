@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta
 from functools import cached_property
 from pathlib import Path
 from typing import cast
@@ -6,16 +7,18 @@ from typing import cast
 import pandas as pd
 from matplotlib import pyplot as plt
 from pandas import DataFrame
-from sqlalchemy import Connection, Selectable, select
+from sqlalchemy import Connection, Selectable, func, select
 from sqlalchemy.orm import Session
 
 from pyp.database.engine import engine
-from pyp.database.models import PortfolioStocks, Share, Stock
+from pyp.database.models import PortfolioStocks, Price, Share, Stock
 
 
 class PlotBreakdown:
-    def __init__(self, portfolio_id: int, output_dir: Path | None = None):
+    def __init__(self, portfolio_id: int, date: datetime, output_dir: Path | None = None):
         self.portfolio_id = portfolio_id
+        self.date = date
+        self.start_date = date - timedelta(days=3)
         self.output_dir = output_dir
         self.show = self.output_dir is None
 
@@ -26,12 +29,16 @@ class PlotBreakdown:
                 Stock.moniker,
                 Stock.stock_type,
                 Stock.sector_weightings,
-                Share.amount,
-                Share.price,
+                func.sum(Share.amount).label("amount"),
+                Price.amount.label("price"),
             )
+            .distinct()
             .join(Share.portfolio_stocks)
             .join(PortfolioStocks.stock)
+            .join(Stock.prices)
             .where(PortfolioStocks.portfolio_id == self.portfolio_id)
+            .where(Price.date == self.date.strftime("%Y-%m-%d"))
+            .group_by(Share.portfolio_stocks_id)
         )
 
     @cached_property
@@ -57,12 +64,8 @@ class PlotBreakdown:
         return df.drop(columns=["amount", "price"])
 
     @property
-    def group_by_moniker_df(self) -> DataFrame:
-        return self.share_value_df.groupby(["moniker", "stock_type", "sector_weightings"]).sum().reset_index()
-
-    @property
     def expand_by_sector_df(self) -> DataFrame:
-        df = self.group_by_moniker_df.copy(deep=True)
+        df = self.share_value_df.copy(deep=True)
         df = df.join(DataFrame(df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))
 
         return df.drop(columns=["sector_weightings"])

@@ -38,7 +38,6 @@ files = "**/*.py"
 
 [[tool.mypy.overrides]]
 module = [
-    "pyp",
     "yfinance"
 ]
 ignore_missing_imports = true

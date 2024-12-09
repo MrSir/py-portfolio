@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -15,8 +16,9 @@ def callback(
     ctx: typer.Context,
     username: Annotated[str, typer.Argument(help="The username of the user.")],
     portfolio_name: Annotated[str, typer.Argument(help="The portfolio name.")],
+    date: Annotated[datetime, typer.Argument(help="The date to plot for.")],
 ) -> None:
-    ctx.obj = {"portfolio_id": resolve_portfolio(username, portfolio_name).id}
+    ctx.obj = {"date": date, "portfolio_id": resolve_portfolio(username, portfolio_name).id}
 
 
 @plot_app.command(name="breakdown", help="Plot pie-charts of the portfolio breakdown.")
@@ -24,7 +26,7 @@ def breakdown(
     ctx: typer.Context,
     output_dir: Annotated[Optional[Path], typer.Option(help="The path to write the resulting json data files.")] = None,
 ) -> None:
-    PlotBreakdown(ctx.obj["portfolio_id"], output_dir=output_dir).plot()
+    PlotBreakdown(ctx.obj["portfolio_id"], ctx.obj["date"], output_dir=output_dir).plot()
 
 
 @plot_app.command(name="growth", help="Plot charts showing the overall portfolio growth.")
