@@ -16,7 +16,9 @@ def callback(
     ctx: typer.Context,
     username: Annotated[str, typer.Argument(help="The username of the user.")],
     portfolio_name: Annotated[str, typer.Argument(help="The portfolio name.")],
-    date: Annotated[datetime, typer.Argument(help="The date to plot for.")],
+    date: Annotated[
+        datetime, typer.Option("--date", "-d", metavar="YYYY-MM-DD", help="The date to plot for.")
+    ] = datetime.now(),
 ) -> None:
     ctx.obj = {"date": date, "portfolio_id": resolve_portfolio(username, portfolio_name).id}
 
