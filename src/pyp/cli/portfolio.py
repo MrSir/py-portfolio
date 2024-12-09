@@ -6,25 +6,22 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typer import Typer
 
+from pyp.cli.common import resolve_portfolio
 from pyp.database.engine import engine
-from pyp.database.models import Portfolio, PortfolioStocks, Share, Stock, User
+from pyp.database.models import Portfolio, PortfolioStocks, Share, Stock
 
 portfolio_app = Typer(name="portfolio", help="Manage portfolio DB entities.")
+
+# TODO Test
 
 
 @portfolio_app.callback()
 def callback(
     ctx: typer.Context,
     username: Annotated[str, typer.Argument(help="The username of the user.")],
-    name: Annotated[str, typer.Argument(help="The portfolio name.")],
+    portfolio_name: Annotated[str, typer.Argument(help="The portfolio name.")],
 ) -> None:
-    with Session(engine) as session:
-        user: User = session.scalars(select(User).where(User.username == username)).one()
-        portfolio: Portfolio = session.scalars(
-            select(Portfolio).where(Portfolio.name == name).where(Portfolio.user_id == user.id)
-        ).one()
-
-        ctx.obj = {"user": user, "portfolio": portfolio}
+    ctx.obj = {"portfolio": resolve_portfolio(username, portfolio_name)}
 
 
 @portfolio_app.command(name="add", help="Add a moniker to the portfolio.")
