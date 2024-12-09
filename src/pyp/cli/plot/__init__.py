@@ -47,6 +47,6 @@ def growth_breakdown_mom(ctx: typer.Context) -> None:
     pass
 
 
-@plot_app.command(name="growth-breakdown", help="Plot charts showing the portfolio growth for moth over month.")
+@plot_app.command(name="growth-breakdown", help="Plot charts showing the portfolio growth overall.")
 def growth_breakdown(ctx: typer.Context) -> None:
     pass
