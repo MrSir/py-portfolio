@@ -8,6 +8,7 @@ from typer import Typer
 from pyp.cli.common import resolve_portfolio
 from pyp.cli.plot.commands.breakdown import PlotBreakdown
 from pyp.cli.plot.commands.growth import PlotGrowth as PlotGrowth
+from pyp.cli.plot.commands.growth_breakdown import PlotGrowthBreakdown, PlotGrowthBreakdownMonthOverMonth
 
 plot_app = Typer(name="plot", help="Plot various charts of the portfolio.")
 
@@ -37,7 +38,6 @@ def growth(
     ctx: typer.Context,
     output_dir: Annotated[Optional[Path], typer.Option(help="The path to write the resulting json data files.")] = None,
 ) -> None:
-    pass
     PlotGrowth(ctx.obj["portfolio_id"], ctx.obj["date"], output_dir=output_dir).plot()
 
 
@@ -54,4 +54,9 @@ def growth_breakdown(
     ] = False,
     output_dir: Annotated[Optional[Path], typer.Option(help="The path to write the resulting json data files.")] = None,
 ) -> None:
-    pass
+    if month_over_month:
+        PlotGrowthBreakdownMonthOverMonth(ctx.obj["portfolio_id"], ctx.obj["date"], output_dir=output_dir).plot()
+
+        return
+
+    PlotGrowthBreakdown(ctx.obj["portfolio_id"], ctx.obj["date"], output_dir=output_dir).plot()

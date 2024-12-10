@@ -6,9 +6,7 @@ from pytest_mock import MockFixture
 from typer import Typer
 from typer.testing import CliRunner
 
-from pyp.cli.plot import plot_app
-from pyp.cli.plot.commands.breakdown import PlotBreakdown
-from pyp.cli.plot.commands.growth import PlotGrowth
+from pyp.cli.plot import PlotBreakdown, PlotGrowth, PlotGrowthBreakdown, PlotGrowthBreakdownMonthOverMonth, plot_app
 
 
 @pytest.fixture
@@ -94,6 +92,14 @@ def test_growth_breakdown_command(
 ) -> None:
     mocker.patch("pyp.cli.plot.resolve_portfolio", mock_resolve_portfolio)
 
+    mock_plot_growth_breakdown = mocker.MagicMock()
+    mock_plot_growth_breakdown.plot = mocker.MagicMock()
+    mock_class = mocker.MagicMock(spec=PlotGrowthBreakdown, return_value=mock_plot_growth_breakdown)
+    mocker.patch("pyp.cli.plot.PlotGrowthBreakdown", mock_class)
+
+    mock_class_mom = mocker.MagicMock(spec=PlotGrowthBreakdownMonthOverMonth)
+    mocker.patch("pyp.cli.plot.PlotGrowthBreakdownMonthOverMonth", mock_class)
+
     date = datetime(2024, 12, 9)
 
     result = cli_runner.invoke(
@@ -101,3 +107,38 @@ def test_growth_breakdown_command(
     )
 
     assert result.exit_code == 0
+
+    mock_class.assert_called_once_with(portfolio_id, date, output_dir=None)
+    mock_plot_growth_breakdown.plot.assert_called_once()
+
+    mock_class_mom.assert_not_called()
+
+
+def test_growth_breakdown_command_with_month_over_month(
+    app: Typer, cli_runner: CliRunner, portfolio_id: int, mock_resolve_portfolio: MagicMock, mocker: MockFixture
+) -> None:
+    mocker.patch("pyp.cli.plot.resolve_portfolio", mock_resolve_portfolio)
+
+    mock_plot_growth_breakdown_mom = mocker.MagicMock()
+    mock_plot_growth_breakdown_mom.plot = mocker.MagicMock()
+    mock_class_mom = mocker.MagicMock(
+        spec=PlotGrowthBreakdownMonthOverMonth, return_value=mock_plot_growth_breakdown_mom
+    )
+    mocker.patch("pyp.cli.plot.PlotGrowthBreakdownMonthOverMonth", mock_class_mom)
+
+    mock_class = mocker.MagicMock(spec=PlotGrowthBreakdown)
+    mocker.patch("pyp.cli.plot.PlotGrowthBreakdown", mock_class)
+
+    date = datetime(2024, 12, 9)
+
+    result = cli_runner.invoke(
+        app,
+        ["--date", date.strftime("%Y-%m-%d"), "Username", "PortfolioName", "growth-breakdown", "--month-over-month"],
+    )
+
+    assert result.exit_code == 0
+
+    mock_class_mom.assert_called_once_with(portfolio_id, date, output_dir=None)
+    mock_plot_growth_breakdown_mom.plot.assert_called_once()
+
+    mock_class.assert_not_called()
