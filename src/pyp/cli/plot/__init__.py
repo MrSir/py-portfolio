@@ -7,6 +7,7 @@ from typer import Typer
 
 from pyp.cli.common import resolve_portfolio
 from pyp.cli.plot.commands.breakdown import PlotBreakdown
+from pyp.cli.plot.commands.growth import PlotGrowth as PlotGrowth
 
 plot_app = Typer(name="plot", help="Plot various charts of the portfolio.")
 
@@ -37,6 +38,7 @@ def growth(
     output_dir: Annotated[Optional[Path], typer.Option(help="The path to write the resulting json data files.")] = None,
 ) -> None:
     pass
+    # PlotGrowth(ctx.obj["portfolio_id"], ctx.obj["date"], output_dir=output_dir).show()
 
 
 @plot_app.command(name="growth-breakdown", help="Plot charts showing the portfolio growth breakdown.")

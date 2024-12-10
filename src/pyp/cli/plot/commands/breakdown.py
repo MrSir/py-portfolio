@@ -1,27 +1,14 @@
 import json
-from datetime import datetime, timedelta
-from functools import cached_property
-from pathlib import Path
-from typing import cast
 
-import pandas as pd
 from matplotlib import pyplot as plt
 from pandas import DataFrame
-from sqlalchemy import Connection, Selectable, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import Selectable, func, select
 
-from pyp.database.engine import engine
+from pyp.cli.plot.commands.base import PlotCommand
 from pyp.database.models import PortfolioStocks, Price, Share, Stock
 
 
-class PlotBreakdown:
-    def __init__(self, portfolio_id: int, date: datetime, output_dir: Path | None = None):
-        self.portfolio_id = portfolio_id
-        self.date = date
-        self.start_date = date - timedelta(days=3)
-        self.output_dir = output_dir
-        self.show = self.output_dir is None
-
+class PlotBreakdown(PlotCommand):
     @property
     def db_query(self) -> Selectable:
         return (
@@ -41,27 +28,15 @@ class PlotBreakdown:
             .group_by(Share.portfolio_stocks_id)
         )
 
-    @cached_property
-    def db_data_df(self) -> DataFrame:
-        with Session(engine) as session:
-            db_data_df = pd.read_sql(self.db_query, cast(Connection, session.bind)).astype(
-                dtype={
-                    "moniker": "string",
-                    "stock_type": "string",
-                    "sector_weightings": "object",
-                    "amount": "float64",
-                    "price": "float64",
-                }
-            )
-
-        return db_data_df
-
     @property
-    def share_value_df(self) -> DataFrame:
-        df = self.db_data_df.copy(deep=True)
-        df["value"] = df["amount"] * df["price"]
-
-        return df.drop(columns=["amount", "price"])
+    def db_data_df_dtypes(self) -> dict[str, str]:
+        return {
+            "moniker": "string",
+            "stock_type": "string",
+            "sector_weightings": "object",
+            "amount": "float64",
+            "price": "float64",
+        }
 
     @property
     def expand_by_sector_df(self) -> DataFrame:
@@ -107,7 +82,7 @@ class PlotBreakdown:
         self.stock_type_breakdown_df.to_json(self.output_dir / "stock_type_breakdown.json", orient="records")
         self.sector_breakdown_df.to_json(self.output_dir / "sector_breakdown.json", orient="records")
 
-    def show_breakdowns(self) -> None:
+    def show(self) -> None:
         self.moniker_breakdown_df.plot.pie(
             y="percent", labels=self.moniker_breakdown_df["moniker"], figsize=(5, 5), autopct="%.2f%%"
         )
@@ -119,11 +94,3 @@ class PlotBreakdown:
         )
 
         plt.show()
-
-    def plot(self) -> None:
-        if self.output_dir is not None:
-            self.write_json_files()
-
-            return
-
-        self.show_breakdowns()

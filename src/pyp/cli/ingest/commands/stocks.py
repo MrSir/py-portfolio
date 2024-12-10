@@ -11,6 +11,8 @@ from yfinance import Ticker, download
 from pyp.database.engine import engine
 from pyp.database.models import Currency, Price, Stock
 
+# TODO Test
+
 
 class IngestStocks:
     @property
@@ -29,6 +31,7 @@ class IngestStocks:
 
     @cached_property
     def monikers(self) -> list[str]:
+        return ["RDVY"]
         return [stock.moniker for stock in self.stocks]
 
     @cached_property
@@ -76,6 +79,8 @@ class IngestStocks:
         with Session(engine) as session:
             for moniker in self.monikers:
                 stock_prices_series = adj_close_series[moniker]
+
+                print(stock_prices_series)
 
                 prices = [
                     Price(

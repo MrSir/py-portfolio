@@ -1,16 +1,16 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, call
+from unittest.mock import call
 
-import pandas as pd
 import pytest
 from pandas import DataFrame
 from pytest_mock import MockFixture
 from sqlalchemy import Selectable
 
+from pyp.cli.plot.commands.base import PlotCommand
 from pyp.cli.plot.commands.breakdown import PlotBreakdown
-from pyp.database.engine import engine
+from pyp.cli.plot.commands.protocols import PlotCommandProtocol
 
 
 @pytest.fixture
@@ -74,7 +74,7 @@ def share_value_df(db_data_df: DataFrame) -> DataFrame:
     df = db_data_df.copy(deep=True)
     df["value"] = df["amount"] * df["price"]
 
-    return df.drop(columns=["amount", "price"])
+    return df.drop(columns=["price"])
 
 
 @pytest.fixture
@@ -105,10 +105,8 @@ def test_initialization(portfolio_id: int) -> None:
     date = datetime(2024, 12, 9)
     command = PlotBreakdown(portfolio_id, date, output_dir=output_dir)
 
-    assert portfolio_id == command.portfolio_id
-    assert date == command.date
-    assert output_dir == command.output_dir
-    assert command.show is False
+    assert isinstance(command, PlotCommand)
+    assert isinstance(command, PlotCommandProtocol)
 
 
 def test_db_query_property(command: PlotBreakdown) -> None:
@@ -134,67 +132,14 @@ def test_db_query_property(command: PlotBreakdown) -> None:
     assert expected_query == str(db_query).replace("\n", "")
 
 
-def test_db_data_df_property(
-    command: PlotBreakdown,
-    db_data_df: DataFrame,
-    mock_session_class: MagicMock,
-    mock_session: MagicMock,
-    mocker: MockFixture,
-) -> None:
-    mocker.patch("pyp.cli.plot.commands.breakdown.Session", mock_session_class)
-
-    mock_read_sql = mocker.MagicMock(return_value=db_data_df)
-    mocker.patch("pyp.cli.plot.commands.breakdown.pd.read_sql", mock_read_sql)
-
-    db_query = Selectable()
-    mock_property = mocker.PropertyMock(return_value=db_query)
-    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.db_query", mock_property)
-
-    pd.set_option("display.max_rows", None)
-    actual_df = command.db_data_df
-
-    assert isinstance(actual_df, DataFrame)
-    assert db_data_df.equals(actual_df)
-
-    mock_session_class.assert_called_once_with(engine)
-    mock_read_sql.assert_called_once_with(db_query, mock_session.bind)
-
-
-def test_db_data_df_property_caches(
-    command: PlotBreakdown,
-    db_data_df: DataFrame,
-    mock_session_class: MagicMock,
-    mock_session: MagicMock,
-    mocker: MockFixture,
-) -> None:
-    mocker.patch("pyp.cli.plot.commands.breakdown.Session", mock_session_class)
-
-    mock_read_sql = mocker.MagicMock(return_value=db_data_df)
-    mocker.patch("pyp.cli.plot.commands.breakdown.pd.read_sql", mock_read_sql)
-
-    db_query = Selectable()
-    mock_property = mocker.PropertyMock(return_value=db_query)
-    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.db_query", mock_property)
-
-    assert isinstance(command.db_data_df, DataFrame), "First time it computes"
-    assert isinstance(command.db_data_df, DataFrame), "Second time it caches"
-
-    mock_session_class.assert_called_once_with(engine)
-    mock_read_sql.assert_called_once_with(db_query, mock_session.bind)
-
-
-def test_share_value_df_property(command: PlotBreakdown, db_data_df: DataFrame, mocker: MockFixture) -> None:
-    mock_property = mocker.PropertyMock(return_value=db_data_df)
-    mocker.patch("pyp.cli.plot.commands.breakdown.PlotBreakdown.db_data_df", mock_property)
-
-    df = db_data_df.copy(deep=True)
-    df["value"] = df["amount"] * df["price"]
-    df = df.drop(columns=["amount", "price"])
-
-    share_value_df = command.share_value_df
-
-    assert isinstance(share_value_df, DataFrame)
-    assert df.equals(share_value_df)
+def test_db_data_df_dtypes_property(command: PlotBreakdown) -> None:
+    assert {
+        "moniker": "string",
+        "stock_type": "string",
+        "sector_weightings": "object",
+        "amount": "float64",
+        "price": "float64",
+    } == command.db_data_df_dtypes
 
 
 def test_expand_by_sector_df_property(command: PlotBreakdown, share_value_df: DataFrame, mocker: MockFixture) -> None:
@@ -301,7 +246,7 @@ def test_writes_json_files(command: PlotBreakdown, mocker: MockFixture) -> None:
     )
 
 
-def test_show_breakdowns(command: PlotBreakdown, mocker: MockFixture) -> None:
+def test_show(command: PlotBreakdown, mocker: MockFixture) -> None:
     mock_plot = mocker.MagicMock()
     mock_plot.pie = mocker.MagicMock()
     mock_moniker_breakdown_df = mocker.MagicMock()
@@ -317,7 +262,7 @@ def test_show_breakdowns(command: PlotBreakdown, mocker: MockFixture) -> None:
     mock_show = mocker.MagicMock()
     mocker.patch("pyp.cli.plot.commands.breakdown.plt.show", mock_show)
 
-    command.show_breakdowns()
+    command.show()
 
     mock_plot.pie.assert_has_calls([
         call(y="percent", labels=mock_moniker_breakdown_df["moniker"], figsize=(5, 5), autopct="%.2f%%"),
@@ -336,11 +281,11 @@ def test_plot_writes_json_files_when_output_dir_is_provided(command: PlotBreakdo
     mock_write_json_files.assert_called_once()
 
 
-def test_plot_shows_breakdowns_if_show_flag(command: PlotBreakdown, mocker: MockFixture) -> None:
-    mock_show_breakdowns = mocker.MagicMock()
-    mocker.patch.object(command, "show_breakdowns", mock_show_breakdowns)
+def test_plot_shows_if_show_flag(command: PlotBreakdown, mocker: MockFixture) -> None:
+    mock_show = mocker.MagicMock()
+    mocker.patch.object(command, "show", mock_show)
     command.output_dir = None
 
     command.plot()
 
-    mock_show_breakdowns.assert_called_once()
+    mock_show.assert_called_once()

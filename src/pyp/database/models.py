@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import Date, Double, Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -81,7 +81,7 @@ class Share(Base):
     portfolio_stocks_id: Mapped[int] = mapped_column(ForeignKey("portfolio_stocks.id"))
     amount: Mapped[float] = mapped_column(Double())
     price: Mapped[float] = mapped_column(Double())
-    purchased_on: Mapped[datetime] = mapped_column(Date())
+    purchased_on: Mapped[date] = mapped_column(Date())
 
     portfolio_stocks: Mapped["PortfolioStocks"] = relationship(back_populates="shares", viewonly=True)
 
