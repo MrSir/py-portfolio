@@ -270,22 +270,3 @@ def test_show(command: PlotBreakdown, mocker: MockFixture) -> None:
         call(y="percent", labels=mock_sector_breakdown_df["sector"], figsize=(5, 5), autopct="%.2f%%"),
     ])
     mock_show.assert_called_once()
-
-
-def test_plot_writes_json_files_when_output_dir_is_provided(command: PlotBreakdown, mocker: MockFixture) -> None:
-    mock_write_json_files = mocker.MagicMock()
-    mocker.patch.object(command, "write_json_files", mock_write_json_files)
-
-    command.plot()
-
-    mock_write_json_files.assert_called_once()
-
-
-def test_plot_shows_if_show_flag(command: PlotBreakdown, mocker: MockFixture) -> None:
-    mock_show = mocker.MagicMock()
-    mocker.patch.object(command, "show", mock_show)
-    command.output_dir = None
-
-    command.plot()
-
-    mock_show.assert_called_once()

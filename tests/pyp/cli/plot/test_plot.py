@@ -6,7 +6,9 @@ from pytest_mock import MockFixture
 from typer import Typer
 from typer.testing import CliRunner
 
-from pyp.cli.plot import PlotBreakdown, plot_app
+from pyp.cli.plot import plot_app
+from pyp.cli.plot.commands.breakdown import PlotBreakdown
+from pyp.cli.plot.commands.growth import PlotGrowth
 
 
 @pytest.fixture
@@ -72,11 +74,19 @@ def test_growth_command(
 ) -> None:
     mocker.patch("pyp.cli.plot.resolve_portfolio", mock_resolve_portfolio)
 
+    mock_plot_growth = mocker.MagicMock()
+    mock_plot_growth.plot = mocker.MagicMock()
+    mock_class = mocker.MagicMock(spec=PlotGrowth, return_value=mock_plot_growth)
+    mocker.patch("pyp.cli.plot.PlotGrowth", mock_class)
+
     date = datetime(2024, 12, 9)
 
     result = cli_runner.invoke(app, ["--date", date.strftime("%Y-%m-%d"), "Username", "PortfolioName", "growth"])
 
     assert result.exit_code == 0
+
+    mock_class.assert_called_once_with(portfolio_id, date, output_dir=None)
+    mock_plot_growth.plot.assert_called_once()
 
 
 def test_growth_breakdown_command(

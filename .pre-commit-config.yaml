@@ -14,5 +14,6 @@ repos:
       - id: mypy
         name: verify typing
         entry: poetry run mypy --config-file=./pyproject.toml
+        require_serial: true
         language: python
         files: '(src|tests)/.*\.py$'

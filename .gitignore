@@ -3,3 +3,4 @@ __pycache__/
 .idea
 pyp.sqlite
 yfinances_data
+.coverage

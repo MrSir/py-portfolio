@@ -135,3 +135,31 @@ def test_share_value_df_property(command: PlotCommand, db_data_df: DataFrame, mo
 
     assert isinstance(share_value_df, DataFrame)
     assert df.equals(share_value_df)
+
+
+def test_plot_writes_json_files_when_output_dir_is_provided(command: PlotCommand, mocker: MockFixture) -> None:
+    mock_write_json_files = mocker.MagicMock()
+    mocker.patch.object(command, "write_json_files", mock_write_json_files)
+
+    mock_show = mocker.MagicMock()
+    mocker.patch.object(command, "show", mock_show)
+
+    command.plot()
+
+    mock_write_json_files.assert_called_once()
+    mock_show.assert_not_called()
+
+
+def test_plot_shows_when_output_dir_is_none(command: PlotCommand, mocker: MockFixture) -> None:
+    mock_write_json_files = mocker.MagicMock()
+    mocker.patch.object(command, "write_json_files", mock_write_json_files)
+
+    mock_show = mocker.MagicMock()
+    mocker.patch.object(command, "show", mock_show)
+
+    command.output_dir = None
+
+    command.plot()
+
+    mock_write_json_files.assert_not_called()
+    mock_show.assert_called_once()
