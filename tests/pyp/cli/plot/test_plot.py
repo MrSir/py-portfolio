@@ -59,7 +59,7 @@ def test_breakdown_command(
 
     date = datetime(2024, 12, 9)
 
-    result = cli_runner.invoke(app, ["Username", "PortfolioName", date.strftime("%Y-%m-%d"), "breakdown"])
+    result = cli_runner.invoke(app, ["--date", date.strftime("%Y-%m-%d"), "Username", "PortfolioName", "breakdown"])
 
     assert result.exit_code == 0
 
@@ -74,7 +74,7 @@ def test_growth_command(
 
     date = datetime(2024, 12, 9)
 
-    result = cli_runner.invoke(app, ["Username", "PortfolioName", date.strftime("%Y-%m-%d"), "growth"])
+    result = cli_runner.invoke(app, ["--date", date.strftime("%Y-%m-%d"), "Username", "PortfolioName", "growth"])
 
     assert result.exit_code == 0
 
@@ -86,6 +86,8 @@ def test_growth_breakdown_command(
 
     date = datetime(2024, 12, 9)
 
-    result = cli_runner.invoke(app, ["Username", "PortfolioName", date.strftime("%Y-%m-%d"), "growth-breakdown"])
+    result = cli_runner.invoke(
+        app, ["--date", date.strftime("%Y-%m-%d"), "Username", "PortfolioName", "growth-breakdown"]
+    )
 
     assert result.exit_code == 0

@@ -11,8 +11,8 @@ repos:
         entry: poetry run ruff format --config ./pyproject.toml
         language: python
         files: '(src|tests)/.*\.py$'
-#      - id: mypy
-#        name: verify typing
-#        entry: poetry run mypy --config-file=./pyproject.toml
-#        language: python
-#        files: '(src|tests)/.*\.py$'
+      - id: mypy
+        name: verify typing
+        entry: poetry run mypy --config-file=./pyproject.toml
+        language: python
+        files: '(src|tests)/.*\.py$'
