@@ -99,8 +99,22 @@ def summed_monthly_df(market_value_df: DataFrame) -> DataFrame:
 
 
 @pytest.fixture
-def profit_df(summed_monthly_df: DataFrame) -> DataFrame:
+def cumulative_sum_df(summed_monthly_df: DataFrame) -> DataFrame:
     df = summed_monthly_df.copy(deep=True)
+
+    df["cum_sum_value"] = df["value"].cumsum()
+    df["cum_sum_invested"] = df["invested"].cumsum()
+
+    df = df.drop(columns=["invested", "value"]).rename(
+        columns={"cum_sum_value": "value", "cum_sum_invested": "invested"}
+    )
+
+    return df
+
+
+@pytest.fixture
+def profit_df(cumulative_sum_df: DataFrame) -> DataFrame:
+    df = cumulative_sum_df.copy(deep=True)
     df["profit"] = df["value"] - df["invested"]
 
     return df
@@ -244,11 +258,28 @@ def test_summed_monthly_df(command: PlotGrowth, market_value_df: DataFrame, mock
     assert df.equals(summed_monthly_df)
 
 
-def test_profit_df(command: PlotGrowth, summed_monthly_df: DataFrame, mocker: MockFixture) -> None:
+def test_cumulative_sum_df(command: PlotGrowth, summed_monthly_df: DataFrame, mocker: MockFixture) -> None:
     mock_property = mocker.PropertyMock(return_value=summed_monthly_df)
     mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.summed_monthly_df", mock_property)
 
     df = summed_monthly_df.copy(deep=True)
+    df["cum_sum_value"] = df["value"].cumsum()
+    df["cum_sum_invested"] = df["invested"].cumsum()
+    df = df.drop(columns=["invested", "value"]).rename(
+        columns={"cum_sum_value": "value", "cum_sum_invested": "invested"}
+    )
+
+    cumulative_sum_df = command.cumulative_sum_df
+
+    assert isinstance(cumulative_sum_df, DataFrame)
+    assert df.equals(cumulative_sum_df)
+
+
+def test_profit_df(command: PlotGrowth, cumulative_sum_df: DataFrame, mocker: MockFixture) -> None:
+    mock_property = mocker.PropertyMock(return_value=cumulative_sum_df)
+    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.cumulative_sum_df", mock_property)
+
+    df = cumulative_sum_df.copy(deep=True)
     df["profit"] = df["value"] - df["invested"]
 
     profit_df = command.profit_df

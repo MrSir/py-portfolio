@@ -69,6 +69,14 @@ class PlotGrowth(PlotCommand):
         )
 
     @property
+    def all_months_df(self) -> DataFrame:
+        df = self.monthly_df.copy(deep=True)
+        # TODO Implement and Test
+        # find the months from the timeline that are missing and add them
+        # May need to move this earlier as it will need to query prices and use monikers
+        return df
+
+    @property
     def market_value_df(self) -> DataFrame:
         df = self.monthly_df.copy(deep=True)
         df["value"] = df["amount"] * df["market_price"]
@@ -89,8 +97,21 @@ class PlotGrowth(PlotCommand):
         )
 
     @property
-    def profit_df(self) -> DataFrame:
+    def cumulative_sum_df(self) -> DataFrame:
         df = self.summed_monthly_df.copy(deep=True)
+
+        df["cum_sum_value"] = df["value"].cumsum()
+        df["cum_sum_invested"] = df["invested"].cumsum()
+
+        df = df.drop(columns=["invested", "value"]).rename(
+            columns={"cum_sum_value": "value", "cum_sum_invested": "invested"}
+        )
+
+        return df
+
+    @property
+    def profit_df(self) -> DataFrame:
+        df = self.cumulative_sum_df.copy(deep=True)
         df["profit"] = df["value"] - df["invested"]
 
         return df
