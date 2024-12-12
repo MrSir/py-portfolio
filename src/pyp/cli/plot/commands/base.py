@@ -1,7 +1,6 @@
 from datetime import datetime
-from functools import cached_property
 from pathlib import Path
-from typing import cast
+from typing import Self, cast
 
 import pandas as pd
 from pandas import DataFrame
@@ -17,38 +16,46 @@ class PlotCommand:
         self.date = date
         self.output_dir = output_dir
 
-    @property
-    def db_query(self) -> Selectable:
-        raise NotImplementedError
+        self._df: DataFrame | None = None
 
     @property
-    def db_data_df_dtypes(self) -> dict[str, str]:
+    def _db_query(self) -> Selectable:
         raise NotImplementedError
-
-    def write_json_files(self) -> None:
-        raise NotImplementedError
-
-    def show(self) -> None:
-        raise NotImplementedError
-
-    @cached_property
-    def db_data_df(self) -> DataFrame:
-        with Session(engine) as session:
-            db_data_df = pd.read_sql(self.db_query, cast(Connection, session.bind)).astype(dtype=self.db_data_df_dtypes)
-
-        return db_data_df
 
     @property
-    def share_value_df(self) -> DataFrame:
-        df = self.db_data_df.copy(deep=True)
-        df["value"] = df["amount"] * df["price"]
+    def _df_dtypes(self) -> dict[str, str]:
+        raise NotImplementedError
 
-        return df.drop(columns=["price"])
+    def _prepare_df(self) -> None:
+        raise NotImplementedError
+
+    def _write_json_files(self) -> None:
+        raise NotImplementedError
+
+    def _show(self) -> None:
+        raise NotImplementedError
+
+    @property
+    def df(self) -> DataFrame:
+        if self._df is None:
+            with Session(engine) as session:
+                self._df = pd.read_sql(self._db_query, cast(Connection, session.bind)).astype(dtype=self._df_dtypes)
+
+        return self._df
+
+    def _compute_share_value(self) -> Self:
+        if self._df is not None:
+            self._df["value"] = self.df["amount"] * self.df["price"]
+            self._df = self.df.drop(columns=["price"])
+
+        return self
 
     def plot(self) -> None:
+        self._prepare_df()
+
         if self.output_dir is not None:
-            self.write_json_files()
+            self._write_json_files()
 
             return
 
-        self.show()
+        self._show()

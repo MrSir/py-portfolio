@@ -1,4 +1,5 @@
 import json
+from typing import Self
 
 from matplotlib import pyplot as plt
 from pandas import DataFrame
@@ -10,7 +11,7 @@ from pyp.database.models import PortfolioStocks, Price, Share, Stock
 
 class PlotBreakdown(PlotCommand):
     @property
-    def db_query(self) -> Selectable:
+    def _db_query(self) -> Selectable:
         return (
             select(
                 Stock.moniker,
@@ -29,7 +30,7 @@ class PlotBreakdown(PlotCommand):
         )
 
     @property
-    def db_data_df_dtypes(self) -> dict[str, str]:
+    def _df_dtypes(self) -> dict[str, str]:
         return {
             "moniker": "string",
             "stock_type": "string",
@@ -38,59 +39,55 @@ class PlotBreakdown(PlotCommand):
             "price": "float64",
         }
 
-    @property
-    def expand_by_sector_df(self) -> DataFrame:
-        df = self.share_value_df.copy(deep=True)
-        df = df.join(DataFrame(df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))
+    def _expand_by_sector(self) -> Self:
+        self._df = (self.df.join(DataFrame(self.df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))).drop(
+            columns=["sector_weightings"]
+        )
 
-        return df.drop(columns=["sector_weightings"])
+        return self
 
-    @property
-    def percent_by_moniker_df(self) -> DataFrame:
-        df = self.expand_by_sector_df.copy(deep=True)
-        df["total_value"] = df["value"].sum()
-        df["percent"] = df["value"] / df["total_value"]
+    def _calculate_percent_by_moniker(self) -> Self:
+        if self._df is not None:
+            self._df["total_value"] = self.df["value"].sum()
+            self._df["percent"] = self.df["value"] / self.df["total_value"]
+            self._df = self.df.drop(columns=["value", "total_value"])
 
-        return df.drop(columns=["value", "total_value"])
-
-    @property
-    def moniker_breakdown_df(self) -> DataFrame:
-        df = self.percent_by_moniker_df.copy(deep=True)
-
-        return df[["moniker", "percent"]]
+        return self
 
     @property
-    def stock_type_breakdown_df(self) -> DataFrame:
-        df = self.percent_by_moniker_df.copy(deep=True)
-
-        return df[["stock_type", "percent"]].groupby("stock_type").sum().reset_index()
+    def _moniker_breakdown_df(self) -> DataFrame:
+        return self.df[["moniker", "percent"]]
 
     @property
-    def sector_breakdown_df(self) -> DataFrame:
-        df = self.percent_by_moniker_df.copy(deep=True)
-        df = df.drop(columns=["moniker", "stock_type"])
-        df_minus_percent = df.drop(columns="percent")
-        df = df_minus_percent.multiply(df["percent"], axis="index")
+    def _stock_type_breakdown_df(self) -> DataFrame:
+        return self.df[["stock_type", "percent"]].groupby("stock_type").sum().reset_index()
+
+    @property
+    def _sector_breakdown_df(self) -> DataFrame:
+        df = self.df.drop(columns=["moniker", "stock_type"])
+        df = df.drop(columns="percent").multiply(df["percent"], axis="index")
         df = df.sum().to_frame().reset_index().rename(columns={"index": "sector", 0: "percent"})
 
         return df
 
-    def write_json_files(self) -> None:
-        assert self.output_dir is not None
+    def _prepare_df(self) -> None:
+        self._compute_share_value()._expand_by_sector()._calculate_percent_by_moniker()
 
-        self.moniker_breakdown_df.to_json(self.output_dir / "moniker_breakdown.json", orient="records")
-        self.stock_type_breakdown_df.to_json(self.output_dir / "stock_type_breakdown.json", orient="records")
-        self.sector_breakdown_df.to_json(self.output_dir / "sector_breakdown.json", orient="records")
+    def _write_json_files(self) -> None:
+        if self.output_dir is not None:
+            self._moniker_breakdown_df.to_json(self.output_dir / "moniker_breakdown.json", orient="records")
+            self._stock_type_breakdown_df.to_json(self.output_dir / "stock_type_breakdown.json", orient="records")
+            self._sector_breakdown_df.to_json(self.output_dir / "sector_breakdown.json", orient="records")
 
-    def show(self) -> None:
-        self.moniker_breakdown_df.plot.pie(
-            y="percent", labels=self.moniker_breakdown_df["moniker"], figsize=(5, 5), autopct="%.2f%%"
+    def _show(self) -> None:
+        self._moniker_breakdown_df.plot.pie(
+            y="percent", labels=self._moniker_breakdown_df["moniker"], figsize=(5, 5), autopct="%.2f%%"
         )
-        self.stock_type_breakdown_df.plot.pie(
-            y="percent", labels=self.stock_type_breakdown_df["stock_type"], figsize=(5, 5), autopct="%.2f%%"
+        self._stock_type_breakdown_df.plot.pie(
+            y="percent", labels=self._stock_type_breakdown_df["stock_type"], figsize=(5, 5), autopct="%.2f%%"
         )
-        self.sector_breakdown_df.plot.pie(
-            y="percent", labels=self.sector_breakdown_df["sector"], figsize=(5, 5), autopct="%.2f%%"
+        self._sector_breakdown_df.plot.pie(
+            y="percent", labels=self._sector_breakdown_df["sector"], figsize=(5, 5), autopct="%.2f%%"
         )
 
         plt.show()
