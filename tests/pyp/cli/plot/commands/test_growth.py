@@ -120,6 +120,14 @@ def profit_df(cumulative_sum_df: DataFrame) -> DataFrame:
     return df
 
 
+@pytest.fixture
+def profit_ratio_df(profit_df: DataFrame) -> DataFrame:
+    df = profit_df.copy(deep=True)
+    df["profit_ratio"] = df["profit"] / df["invested"]
+
+    return df
+
+
 def test_initialization(portfolio_id: int) -> None:
     output_dir = Path(__file__).parent
     date = datetime(2024, 12, 9)
@@ -131,7 +139,7 @@ def test_initialization(portfolio_id: int) -> None:
 
 
 def test_db_query_property(command: PlotGrowth) -> None:
-    db_query = command.db_query
+    db_query = command._db_query
 
     assert isinstance(db_query, Selectable)
 
@@ -166,50 +174,45 @@ def test_db_query_property(command: PlotGrowth) -> None:
     assert expected_query == str(db_query).replace("\n", "")
 
 
-def test_db_data_df_dtypes_property(command: PlotGrowth) -> None:
+def test_df_dtypes_property(command: PlotGrowth) -> None:
     assert {
         "moniker": "string",
         "amount": "float64",
         "price": "float64",
         "market_price": "float64",
         "purchased_on": "object",
-    } == command.db_data_df_dtypes
+    } == command._df_dtypes
 
 
-def test_invested_df(command: PlotGrowth, share_value_df: DataFrame, mocker: MockFixture) -> None:
-    mock_property = mocker.PropertyMock(return_value=share_value_df)
-    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.share_value_df", mock_property)
+def test_rename_value_to_invested(command: PlotGrowth, share_value_df: DataFrame) -> None:
+    command._df = share_value_df
 
-    df = share_value_df.copy(deep=True)
-    df = df.rename(columns={"value": "invested"})
+    df = share_value_df.rename(columns={"value": "invested"})
 
-    invested_df = command.invested_df
+    assert command == command._rename_value_to_invested()
 
-    assert isinstance(invested_df, DataFrame)
-    assert df.equals(invested_df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
 
 
-def test_month_df(command: PlotGrowth, invested_df: DataFrame, mocker: MockFixture) -> None:
-    mock_property = mocker.PropertyMock(return_value=invested_df)
-    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.invested_df", mock_property)
+def test_parse_purchased_on_to_month(command: PlotGrowth, invested_df: DataFrame) -> None:
+    command._df = invested_df
 
-    df = invested_df.copy(deep=True)
+    df = invested_df
     df["month"] = pd.to_datetime(df["purchased_on"]).dt.strftime("%Y-%m")
     df = df.drop(columns=["purchased_on"])
 
-    month_df = command.month_df
+    assert command == command._parse_purchased_on_to_month()
 
-    assert isinstance(month_df, DataFrame)
-    assert df.equals(month_df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
 
 
-def test_monthly_df(command: PlotGrowth, month_df: DataFrame, mocker: MockFixture) -> None:
-    mock_property = mocker.PropertyMock(return_value=month_df)
-    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.month_df", mock_property)
+def test_sum_up_by_month_and_moniker(command: PlotGrowth, month_df: DataFrame) -> None:
+    command._df = month_df
 
-    df = month_df.copy(deep=True)
     df = (
-        df.groupby(["moniker", "month"])
+        month_df.groupby(["moniker", "month"])
         .agg({
             "amount": "sum",
             "invested": "sum",
@@ -218,33 +221,30 @@ def test_monthly_df(command: PlotGrowth, month_df: DataFrame, mocker: MockFixtur
         .reset_index()
     )
 
-    monthly_df = command.monthly_df
+    assert command == command._sum_up_by_month_and_moniker()
 
-    assert isinstance(monthly_df, DataFrame)
-    assert df.equals(monthly_df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
 
 
-def test_market_value_df(command: PlotGrowth, monthly_df: DataFrame, mocker: MockFixture) -> None:
-    mock_property = mocker.PropertyMock(return_value=monthly_df)
-    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.monthly_df", mock_property)
+def test_compute_market_value(command: PlotGrowth, monthly_df: DataFrame) -> None:
+    command._df = monthly_df
 
     df = monthly_df.copy(deep=True)
     df["value"] = df["amount"] * df["market_price"]
     df = df.drop(columns=["amount", "market_price"])
 
-    market_value_df = command.market_value_df
+    assert command == command._compute_market_value()
 
-    assert isinstance(market_value_df, DataFrame)
-    assert df.equals(market_value_df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
 
 
-def test_summed_monthly_df(command: PlotGrowth, market_value_df: DataFrame, mocker: MockFixture) -> None:
-    mock_property = mocker.PropertyMock(return_value=market_value_df)
-    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.market_value_df", mock_property)
+def test_sum_up_by_month(command: PlotGrowth, market_value_df: DataFrame) -> None:
+    command._df = market_value_df
 
-    df = market_value_df.copy(deep=True)
     df = (
-        df.groupby(["month"])
+        market_value_df.groupby(["month"])
         .agg({
             "invested": "sum",
             "value": "sum",
@@ -252,61 +252,124 @@ def test_summed_monthly_df(command: PlotGrowth, market_value_df: DataFrame, mock
         .reset_index()
     )
 
-    summed_monthly_df = command.summed_monthly_df
+    assert command == command._sum_up_by_month()
 
-    assert isinstance(summed_monthly_df, DataFrame)
-    assert df.equals(summed_monthly_df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
 
 
-def test_cumulative_sum_df(command: PlotGrowth, summed_monthly_df: DataFrame, mocker: MockFixture) -> None:
-    mock_property = mocker.PropertyMock(return_value=summed_monthly_df)
-    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.summed_monthly_df", mock_property)
+def test_compute_cumulative_sums(command: PlotGrowth, summed_monthly_df: DataFrame) -> None:
+    command._df = summed_monthly_df
 
-    df = summed_monthly_df.copy(deep=True)
+    df = summed_monthly_df
     df["cum_sum_value"] = df["value"].cumsum()
     df["cum_sum_invested"] = df["invested"].cumsum()
     df = df.drop(columns=["invested", "value"]).rename(
         columns={"cum_sum_value": "value", "cum_sum_invested": "invested"}
     )
 
-    cumulative_sum_df = command.cumulative_sum_df
+    assert command == command._compute_cumulative_sums()
 
-    assert isinstance(cumulative_sum_df, DataFrame)
-    assert df.equals(cumulative_sum_df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
 
 
-def test_profit_df(command: PlotGrowth, cumulative_sum_df: DataFrame, mocker: MockFixture) -> None:
-    mock_property = mocker.PropertyMock(return_value=cumulative_sum_df)
-    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.cumulative_sum_df", mock_property)
+def test_compute_profit(command: PlotGrowth, cumulative_sum_df: DataFrame) -> None:
+    command._df = cumulative_sum_df
 
-    df = cumulative_sum_df.copy(deep=True)
+    df = cumulative_sum_df
     df["profit"] = df["value"] - df["invested"]
 
-    profit_df = command.profit_df
+    assert command == command._compute_profit()
 
-    assert isinstance(profit_df, DataFrame)
-    assert df.equals(profit_df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
 
 
-def test_growth_df(command: PlotGrowth, profit_df: DataFrame, mocker: MockFixture) -> None:
-    mock_property = mocker.PropertyMock(return_value=profit_df)
-    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.profit_df", mock_property)
+def test_compute_profit_ratio(command: PlotGrowth, profit_df: DataFrame) -> None:
+    command._df = profit_df
 
-    df = profit_df.copy(deep=True)
+    df = profit_df
     df["profit_ratio"] = df["profit"] / df["invested"]
 
-    growth_df = command.growth_df
+    assert command == command._compute_profit_ratio()
 
-    assert isinstance(growth_df, DataFrame)
-    assert df.equals(growth_df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
+
+
+def test_invested_vs_value_df(command: PlotGrowth, profit_ratio_df: DataFrame) -> None:
+    command._df = profit_ratio_df
+
+    df = profit_ratio_df[["month", "invested", "value"]]
+
+    actual_df = command._invested_vs_value_df
+
+    assert isinstance(actual_df, DataFrame)
+    assert df.equals(actual_df)
+
+
+def test_month_vs_profit_df(command: PlotGrowth, profit_ratio_df: DataFrame) -> None:
+    command._df = profit_ratio_df
+
+    df = profit_ratio_df[["month", "profit"]]
+
+    actual_df = command._month_vs_profit_df
+
+    assert isinstance(actual_df, DataFrame)
+    assert df.equals(actual_df)
+
+
+def test_month_vs_profit_ratio_df(command: PlotGrowth, profit_ratio_df: DataFrame) -> None:
+    command._df = profit_ratio_df
+
+    df = profit_ratio_df[["month", "profit_ratio"]]
+
+    actual_df = command._month_vs_profit_ratio_df
+
+    assert isinstance(actual_df, DataFrame)
+    assert df.equals(actual_df)
+
+
+def test_prepare_df(command: PlotGrowth, mocker: MockFixture) -> None:
+    mock_csv = mocker.MagicMock(return_value=command)
+    mocker.patch.object(command, "_compute_share_value", mock_csv)
+    mock_rvti = mocker.MagicMock(return_value=command)
+    mocker.patch.object(command, "_rename_value_to_invested", mock_rvti)
+    mock_ppotm = mocker.MagicMock(return_value=command)
+    mocker.patch.object(command, "_parse_purchased_on_to_month", mock_ppotm)
+    mock_submam = mocker.MagicMock(return_value=command)
+    mocker.patch.object(command, "_sum_up_by_month_and_moniker", mock_submam)
+    mock_cmv = mocker.MagicMock(return_value=command)
+    mocker.patch.object(command, "_compute_market_value", mock_cmv)
+    mock_subm = mocker.MagicMock(return_value=command)
+    mocker.patch.object(command, "_sum_up_by_month", mock_subm)
+    mock_ccs = mocker.MagicMock(return_value=command)
+    mocker.patch.object(command, "_compute_cumulative_sums", mock_ccs)
+    mock_cp = mocker.MagicMock(return_value=command)
+    mocker.patch.object(command, "_compute_profit", mock_cp)
+    mock_cpr = mocker.MagicMock(return_value=command)
+    mocker.patch.object(command, "_compute_profit_ratio", mock_cpr)
+
+    command._prepare_df()
+
+    mock_csv.assert_called_once()
+    mock_rvti.assert_called_once()
+    mock_ppotm.assert_called_once()
+    mock_submam.assert_called_once()
+    mock_cmv.assert_called_once()
+    mock_subm.assert_called_once()
+    mock_ccs.assert_called_once()
+    mock_cp.assert_called_once()
+    mock_cpr.assert_called_once()
 
 
 def test_writes_json_files(command: PlotGrowth, mocker: MockFixture) -> None:
     mock_growth_df = mocker.MagicMock()
     mock_growth_df.to_json = mocker.MagicMock()
-    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.growth_df", mock_growth_df)
+    command._df = mock_growth_df
 
-    command.write_json_files()
+    command._write_json_files()
     assert command.output_dir is not None
 
     mock_growth_df.to_json.assert_called_once_with(command.output_dir / "growth.json", orient="records")
@@ -317,17 +380,21 @@ def test_show(command: PlotGrowth, mocker: MockFixture) -> None:
     mock_plot = mocker.MagicMock()
     mock_plot.area = mock_area
     mock_plot.bar = mocker.MagicMock()
-    mock_df = mocker.MagicMock()
-    mock_df.copy = mocker.MagicMock(return_value=mock_df)
-    mock_df.__getitem__ = mocker.MagicMock(return_value=mock_df)
-    mock_df.plot = mock_plot
-    mock_property = mocker.PropertyMock(return_value=mock_df)
-    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth.growth_df", mock_property)
+
+    mock_ivvdf = mocker.MagicMock()
+    mock_ivvdf.plot = mock_plot
+    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth._invested_vs_value_df", mock_ivvdf)
+    mock_mvpdf = mocker.MagicMock()
+    mock_mvpdf.plot = mock_plot
+    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth._month_vs_profit_df", mock_mvpdf)
+    mock_mvprdf = mocker.MagicMock()
+    mock_mvprdf.plot = mock_plot
+    mocker.patch("pyp.cli.plot.commands.growth.PlotGrowth._month_vs_profit_ratio_df", mock_mvprdf)
 
     mock_show = mocker.MagicMock()
     mocker.patch("pyp.cli.plot.commands.growth.plt.show", mock_show)
 
-    command.show()
+    command._show()
 
     mock_area.assert_has_calls([
         call(x="month", stacked=False, title="Invested vs. Market"),

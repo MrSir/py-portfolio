@@ -35,18 +35,16 @@ class PlotCommand:
     def _show(self) -> None:
         raise NotImplementedError
 
-    @property
-    def df(self) -> DataFrame:
-        if self._df is None:
-            with Session(engine) as session:
-                self._df = pd.read_sql(self._db_query, cast(Connection, session.bind)).astype(dtype=self._df_dtypes)
+    def _read_db(self) -> Self:
+        with Session(engine) as session:
+            self._df = pd.read_sql(self._db_query, cast(Connection, session.bind)).astype(dtype=self._df_dtypes)
 
-        return self._df
+        return self
 
     def _compute_share_value(self) -> Self:
         if self._df is not None:
-            self._df["value"] = self.df["amount"] * self.df["price"]
-            self._df = self.df.drop(columns=["price"])
+            self._df["value"] = self._df["amount"] * self._df["price"]
+            self._df = self._df.drop(columns=["price"])
 
         return self
 

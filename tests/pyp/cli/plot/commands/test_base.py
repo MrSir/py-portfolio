@@ -58,22 +58,7 @@ def test_df_dtypes_raises_not_implemented_error(command: PlotCommand) -> None:
         command._df_dtypes
 
 
-def test_prepare_df_raises_not_implemented_error(command: PlotCommand) -> None:
-    with pytest.raises(NotImplementedError):
-        command._prepare_df()
-
-
-def test_write_json_files_raises_not_implemented_error(command: PlotCommand) -> None:
-    with pytest.raises(NotImplementedError):
-        command._write_json_files()
-
-
-def test_show_raises_not_implemented_error(command: PlotCommand) -> None:
-    with pytest.raises(NotImplementedError):
-        command._show()
-
-
-def test_df_property_fetches_when_none(
+def test_read_db(
     command: PlotCommand,
     df: DataFrame,
     df_dtypes,
@@ -93,43 +78,25 @@ def test_df_property_fetches_when_none(
     mock_dtypes_property = mocker.PropertyMock(return_value=df_dtypes)
     mocker.patch("pyp.cli.plot.commands.base.PlotCommand._df_dtypes", mock_dtypes_property)
 
-    actual_df = command.df
-
-    assert isinstance(actual_df, DataFrame)
-    assert df.equals(actual_df)
+    assert command == command._read_db()
 
     mock_session_class.assert_called_once_with(engine)
     mock_read_sql.assert_called_once_with(db_query, mock_session.bind)
 
 
-def test_df_property_returns_preset(
-    command: PlotCommand,
-    df: DataFrame,
-    df_dtypes,
-    mock_session_class: MagicMock,
-    mock_session: MagicMock,
-    mocker: MockFixture,
-) -> None:
-    mocker.patch("pyp.cli.plot.commands.base.Session", mock_session_class)
+def test_prepare_df_raises_not_implemented_error(command: PlotCommand) -> None:
+    with pytest.raises(NotImplementedError):
+        command._prepare_df()
 
-    mock_read_sql = mocker.MagicMock()
-    mocker.patch("pyp.cli.plot.commands.base.pd.read_sql", mock_read_sql)
 
-    db_query = Selectable()
-    mock_property = mocker.PropertyMock(return_value=db_query)
-    mocker.patch("pyp.cli.plot.commands.base.PlotCommand._db_query", mock_property)
+def test_write_json_files_raises_not_implemented_error(command: PlotCommand) -> None:
+    with pytest.raises(NotImplementedError):
+        command._write_json_files()
 
-    mock_dtypes_property = mocker.PropertyMock(return_value=df_dtypes)
-    mocker.patch("pyp.cli.plot.commands.base.PlotCommand._df_dtypes", mock_dtypes_property)
 
-    command._df = df
-    actual_df = command.df
-
-    assert isinstance(actual_df, DataFrame)
-    assert df.equals(actual_df)
-
-    mock_session_class.assert_not_called()
-    mock_read_sql.assert_not_called()
+def test_show_raises_not_implemented_error(command: PlotCommand) -> None:
+    with pytest.raises(NotImplementedError):
+        command._show()
 
 
 def test_compute_share_value(command: PlotCommand, df: DataFrame) -> None:
@@ -138,10 +105,10 @@ def test_compute_share_value(command: PlotCommand, df: DataFrame) -> None:
     df["value"] = df["amount"] * df["price"]
     df = df.drop(columns=["price"])
 
-    command._compute_share_value()
+    assert command == command._compute_share_value()
 
-    assert isinstance(command.df, DataFrame)
-    assert df.equals(command.df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
 
 
 def test_plot_writes_json_files_when_output_dir_is_provided(command: PlotCommand, mocker: MockFixture) -> None:

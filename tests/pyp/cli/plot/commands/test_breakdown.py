@@ -132,7 +132,7 @@ def test_db_query_property(command: PlotBreakdown) -> None:
     assert expected_query == str(db_query).replace("\n", "")
 
 
-def test_db_data_df_dtypes_property(command: PlotBreakdown) -> None:
+def test_df_dtypes_property(command: PlotBreakdown) -> None:
     assert {
         "moniker": "string",
         "stock_type": "string",
@@ -149,10 +149,10 @@ def test_expand_by_sector(command: PlotBreakdown, share_value_df: DataFrame) -> 
         DataFrame(share_value_df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0)
     ).drop(columns=["sector_weightings"])
 
-    command._expand_by_sector()
+    assert command == command._expand_by_sector()
 
-    assert isinstance(command.df, DataFrame)
-    assert df.equals(command.df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
 
 
 def test_percent_by_moniker(command: PlotBreakdown, expand_by_sector_df: DataFrame) -> None:
@@ -163,10 +163,10 @@ def test_percent_by_moniker(command: PlotBreakdown, expand_by_sector_df: DataFra
     df["percent"] = df["value"] / df["total_value"]
     df = df.drop(columns=["value", "total_value"])
 
-    command._calculate_percent_by_moniker()
+    assert command == command._calculate_percent_by_moniker()
 
-    assert isinstance(command.df, DataFrame)
-    assert df.equals(command.df)
+    assert isinstance(command._df, DataFrame)
+    assert df.equals(command._df)
 
 
 def test_moniker_breakdown_df_property(command: PlotBreakdown, percent_by_moniker_df: DataFrame) -> None:

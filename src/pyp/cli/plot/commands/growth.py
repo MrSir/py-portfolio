@@ -1,3 +1,5 @@
+from typing import Self
+
 import pandas as pd
 from matplotlib import pyplot as plt
 from pandas import DataFrame
@@ -9,7 +11,7 @@ from pyp.database.models import PortfolioStocks, Price, Share, Stock
 
 class PlotGrowth(PlotCommand):
     @property
-    def db_query(self) -> Selectable:
+    def _db_query(self) -> Selectable:
         return (
             select(
                 Stock.moniker,
@@ -32,7 +34,7 @@ class PlotGrowth(PlotCommand):
         )
 
     @property
-    def db_data_df_dtypes(self) -> dict[str, str]:
+    def _df_dtypes(self) -> dict[str, str]:
         return {
             "moniker": "string",
             "amount": "float64",
@@ -41,103 +43,115 @@ class PlotGrowth(PlotCommand):
             "purchased_on": "object",
         }
 
-    @property
-    def invested_df(self) -> DataFrame:
-        df = self.share_value_df.copy(deep=True)
+    def _rename_value_to_invested(self) -> Self:
+        if self._df is not None:
+            self._df = self._df.rename(columns={"value": "invested"})
 
-        return df.rename(columns={"value": "invested"})
+        return self
 
-    @property
-    def month_df(self) -> DataFrame:
-        df = self.invested_df.copy(deep=True)
-        df["month"] = pd.to_datetime(df["purchased_on"]).dt.strftime("%Y-%m")
+    def _parse_purchased_on_to_month(self) -> Self:
+        if self._df is not None:
+            self._df["month"] = pd.to_datetime(self._df["purchased_on"]).dt.strftime("%Y-%m")
+            self._df = self._df.drop(columns=["purchased_on"])
 
-        return df.drop(columns=["purchased_on"])
+        return self
 
-    @property
-    def monthly_df(self) -> DataFrame:
-        df = self.month_df.copy(deep=True)
+    def _sum_up_by_month_and_moniker(self) -> Self:
+        if self._df is not None:
+            self._df = (
+                self._df.groupby(["moniker", "month"])
+                .agg({
+                    "amount": "sum",
+                    "invested": "sum",
+                    "market_price": "last",
+                })
+                .reset_index()
+            )
 
-        return (
-            df.groupby(["moniker", "month"])
-            .agg({
-                "amount": "sum",
-                "invested": "sum",
-                "market_price": "last",
-            })
-            .reset_index()
-        )
+        return self
 
-    @property
-    def all_months_df(self) -> DataFrame:
-        df = self.monthly_df.copy(deep=True)
+    def _add_missing_months(self) -> Self:
         # TODO Implement and Test
         # find the months from the timeline that are missing and add them
         # May need to move this earlier as it will need to query prices and use monikers
-        return df
+        return self
+
+    def _compute_market_value(self) -> Self:
+        if self._df is not None:
+            self._df["value"] = self._df["amount"] * self._df["market_price"]
+            self._df = self._df.drop(columns=["amount", "market_price"])
+
+        return self
+
+    def _sum_up_by_month(self) -> Self:
+        if self._df is not None:
+            self._df = (
+                self._df.groupby(["month"])
+                .agg({
+                    "invested": "sum",
+                    "value": "sum",
+                })
+                .reset_index()
+            )
+
+        return self
+
+    def _compute_cumulative_sums(self) -> Self:
+        if self._df is not None:
+            self._df["cum_sum_value"] = self._df["value"].cumsum()
+            self._df["cum_sum_invested"] = self._df["invested"].cumsum()
+
+            self._df = self._df.drop(columns=["invested", "value"]).rename(
+                columns={"cum_sum_value": "value", "cum_sum_invested": "invested"}
+            )
+
+        return self
+
+    def _compute_profit(self) -> Self:
+        if self._df is not None:
+            self._df["profit"] = self._df["value"] - self._df["invested"]
+
+        return self
+
+    def _compute_profit_ratio(self) -> Self:
+        if self._df is not None:
+            self._df["profit_ratio"] = self._df["profit"] / self._df["invested"]
+
+        return self
 
     @property
-    def market_value_df(self) -> DataFrame:
-        df = self.monthly_df.copy(deep=True)
-        df["value"] = df["amount"] * df["market_price"]
-
-        return df.drop(columns=["amount", "market_price"])
+    def _invested_vs_value_df(self) -> DataFrame:
+        return self._df[["month", "invested", "value"]]  # type:ignore[index]
 
     @property
-    def summed_monthly_df(self) -> DataFrame:
-        df = self.market_value_df.copy(deep=True)
+    def _month_vs_profit_df(self) -> DataFrame:
+        return self._df[["month", "profit"]]  # type:ignore[index]
 
-        return (
-            df.groupby(["month"])
-            .agg({
-                "invested": "sum",
-                "value": "sum",
-            })
-            .reset_index()
+    @property
+    def _month_vs_profit_ratio_df(self) -> DataFrame:
+        return self._df[["month", "profit_ratio"]]  # type:ignore[index]
+
+    def _prepare_df(self) -> None:
+        (
+            self._read_db()
+            ._compute_share_value()
+            ._rename_value_to_invested()
+            ._parse_purchased_on_to_month()
+            ._sum_up_by_month_and_moniker()
+            ._compute_market_value()
+            ._sum_up_by_month()
+            ._compute_cumulative_sums()
+            ._compute_profit()
+            ._compute_profit_ratio()
         )
 
-    @property
-    def cumulative_sum_df(self) -> DataFrame:
-        df = self.summed_monthly_df.copy(deep=True)
+    def _write_json_files(self) -> None:
+        if self.output_dir is not None:
+            self._df.to_json(self.output_dir / "growth.json", orient="records")  # type:ignore[union-attr]
 
-        df["cum_sum_value"] = df["value"].cumsum()
-        df["cum_sum_invested"] = df["invested"].cumsum()
-
-        df = df.drop(columns=["invested", "value"]).rename(
-            columns={"cum_sum_value": "value", "cum_sum_invested": "invested"}
-        )
-
-        return df
-
-    @property
-    def profit_df(self) -> DataFrame:
-        df = self.cumulative_sum_df.copy(deep=True)
-        df["profit"] = df["value"] - df["invested"]
-
-        return df
-
-    @property
-    def growth_df(self) -> DataFrame:
-        df = self.profit_df.copy(deep=True)
-        df["profit_ratio"] = df["profit"] / df["invested"]
-
-        return df
-
-    def write_json_files(self) -> None:
-        assert self.output_dir is not None
-
-        self.growth_df.to_json(self.output_dir / "growth.json", orient="records")
-
-    def show(self) -> None:
-        df = self.growth_df
-
-        invested_vs_value_df = df[["month", "invested", "value"]].copy(deep=True)
-        invested_vs_value_df.plot.area(x="month", stacked=False, title="Invested vs. Market")
-
-        profit_df = df[["month", "profit"]].copy(deep=True)
-        profit_df.plot.area(x="month", stacked=False, title="Profit Growth")
-
-        profit_ratio_df = df[["month", "profit_ratio"]].copy(deep=True)
-        profit_ratio_df.plot.bar(x="month", title="Profit Ratio")
+    def _show(self) -> None:
+        self._invested_vs_value_df.plot.area(x="month", stacked=False, title="Invested vs. Market")
+        self._month_vs_profit_df.plot.area(x="month", stacked=False, title="Profit Growth")
+        self._month_vs_profit_ratio_df.plot.bar(x="month", title="Profit Ratio")
 
         plt.show()

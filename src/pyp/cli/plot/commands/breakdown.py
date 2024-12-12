@@ -40,38 +40,39 @@ class PlotBreakdown(PlotCommand):
         }
 
     def _expand_by_sector(self) -> Self:
-        self._df = (self.df.join(DataFrame(self.df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))).drop(
-            columns=["sector_weightings"]
-        )
+        if self._df is not None:
+            self._df = (
+                self._df.join(DataFrame(self._df["sector_weightings"].apply(json.loads).tolist()).fillna(0.0))
+            ).drop(columns=["amount", "sector_weightings"])
 
         return self
 
     def _calculate_percent_by_moniker(self) -> Self:
         if self._df is not None:
-            self._df["total_value"] = self.df["value"].sum()
-            self._df["percent"] = self.df["value"] / self.df["total_value"]
-            self._df = self.df.drop(columns=["value", "total_value"])
+            self._df["total_value"] = self._df["value"].sum()
+            self._df["percent"] = self._df["value"] / self._df["total_value"]
+            self._df = self._df.drop(columns=["value", "total_value"])
 
         return self
 
     @property
     def _moniker_breakdown_df(self) -> DataFrame:
-        return self.df[["moniker", "percent"]]
+        return self._df[["moniker", "percent"]]  # type:ignore[index]
 
     @property
     def _stock_type_breakdown_df(self) -> DataFrame:
-        return self.df[["stock_type", "percent"]].groupby("stock_type").sum().reset_index()
+        return self._df[["stock_type", "percent"]].groupby("stock_type").sum().reset_index()  # type:ignore[index]
 
     @property
     def _sector_breakdown_df(self) -> DataFrame:
-        df = self.df.drop(columns=["moniker", "stock_type"])
+        df = self._df.drop(columns=["moniker", "stock_type"])  # type:ignore[union-attr]
         df = df.drop(columns="percent").multiply(df["percent"], axis="index")
         df = df.sum().to_frame().reset_index().rename(columns={"index": "sector", 0: "percent"})
 
         return df
 
     def _prepare_df(self) -> None:
-        self._compute_share_value()._expand_by_sector()._calculate_percent_by_moniker()
+        self._read_db()._compute_share_value()._expand_by_sector()._calculate_percent_by_moniker()
 
     def _write_json_files(self) -> None:
         if self.output_dir is not None:
