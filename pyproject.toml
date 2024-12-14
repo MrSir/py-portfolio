@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "py-portfolio"
+version = "0.1.0"
+description = ""
+authors = ["Mitko Tochev <mr.sir88@gmail.com>"]
+readme = "README.md"
+packages = [{include = "pyp", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+typer = "^0.14.0"
+sqlalchemy = "^2.0.36"
+yfinance = "^0.2.50"
+matplotlib = "^3.9.3"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.8.1"
+mypy = "^1.13.0"
+pytest = "^8.3.3"
+pytest-mock = "^3.14.0"
+pytest-cov = "^6.0.0"
+pre-commit = "^4.0.1"
+pandas-stubs = "^2.2.3.241126"
+
+[tool.poetry.scripts]
+pyp = "pyp.cli.main:app"
+
+[tool.ruff]
+line-length = 120
+src = ["src", "tests"]
+preview = true
+
+[tool.ruff.lint]
+extend-select = ["I"]
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+files = "**/*.py"
+
+[[tool.mypy.overrides]]
+module = [
+    "yfinance"
+]
+ignore_missing_imports = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+
+

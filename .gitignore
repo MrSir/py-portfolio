@@ -1,0 +1,7 @@
+__pycache__/
+.venv
+.idea
+pyp.sqlite
+yfinances_data
+.coverage
+output/*.json

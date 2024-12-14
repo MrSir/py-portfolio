@@ -1,0 +1,19 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: fix stile
+        entry: poetry run ruff check --fix --config ./pyproject.toml
+        language: python
+        files: '(src|tests)/.*\.py$'
+      - id: ruff-format
+        name: fix stile
+        entry: poetry run ruff format --config ./pyproject.toml
+        language: python
+        files: '(src|tests)/.*\.py$'
+      - id: mypy
+        name: verify typing
+        entry: poetry run mypy --config-file=./pyproject.toml
+        require_serial: true
+        language: python
+        files: '(src|tests)/.*\.py$'
