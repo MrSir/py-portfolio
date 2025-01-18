@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "py-portfolio"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 authors = ["Mitko Tochev <mr.sir88@gmail.com>"]
 readme = "README.md"
