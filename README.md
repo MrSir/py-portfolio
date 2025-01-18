@@ -1,5 +1,5 @@
 # py-portfolio
-Investment Portfolio Visualizer with Python. 
+Investment Portfolio Visualizer with Python. [DEMO](https://codepen.io/MrSir88/full/xbKJjzx) of what a given portfolio with a number of equities looks like. 
 
 ## Features
 The tool provides a simple mechanism for creating User's and Portfolios inside a locally stored sqlite database. The more noteworthy features are:
@@ -45,7 +45,7 @@ pyp ingest exchange-rates --help
 > NOTE: I do plan on expanding the pre-packaged exchange rates with the tool to as far back as 2020 and every so often add the latest ones into 2025
 
 ### Creating Portfolio
-Once the project is set up and you have your exchange rates you are ready to start creating portfolios. In order to do this you will first need an user, which can be created by running:
+Once the project is set up, and you have your exchange rates you are ready to start creating portfolios. In order to do this you will first need a user, which can be created by running:
 ```console
 pyp user add <USERNAME>
 ```
