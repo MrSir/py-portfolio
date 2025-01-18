@@ -9,7 +9,7 @@ class CommandProtocol(Protocol):
 
 
 @runtime_checkable
-class PlotCommandProtocol(CommandProtocol, Protocol):
+class OutputCommandProtocol(CommandProtocol, Protocol):
     @property
     def _db_query(self) -> Selectable: ...
 
@@ -18,6 +18,4 @@ class PlotCommandProtocol(CommandProtocol, Protocol):
 
     def _prepare_df(self) -> None: ...
 
-    def _write_json_files(self) -> None: ...
-
-    def _show(self) -> None: ...
+    def _write_data_files(self) -> None: ...

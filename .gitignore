@@ -5,3 +5,6 @@ pyp.sqlite
 yfinances_data
 .coverage
 output/*.json
+public/js/output/*.js
+.env
+extract_rates.py
