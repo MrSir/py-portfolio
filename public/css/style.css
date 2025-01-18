@@ -1,0 +1,21 @@
+#sidebar .row+.row{
+    margin-top: 10px;
+}
+
+#charts .row+ .row{
+    margin-top: 20px;
+}
+
+#sidebar{
+    background-color: #141618;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    min-width: 400px;
+}
+
+#charts{
+    background-color: #33393d;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    min-width: 1200px;
+}

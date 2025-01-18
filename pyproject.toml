@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "py-portfolio"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 authors = ["Mitko Tochev <mr.sir88@gmail.com>"]
 readme = "README.md"
@@ -12,6 +12,8 @@ typer = "^0.14.0"
 sqlalchemy = "^2.0.36"
 yfinance = "^0.2.50"
 matplotlib = "^3.9.3"
+freecurrencyapi = "^0.1.0"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.8.1"
@@ -39,7 +41,8 @@ files = "**/*.py"
 
 [[tool.mypy.overrides]]
 module = [
-    "yfinance"
+    "yfinance.*",
+    "freecurrencyapi.*",
 ]
 ignore_missing_imports = true
 

@@ -1,103 +1,128 @@
 import json
-from functools import cached_property
+from datetime import datetime
 from typing import Sequence
 
 from pandas import DataFrame
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import Engine, Insert, Select, select
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 from yfinance import Ticker, download
 
-from pyp.database.engine import engine
-from pyp.database.models import Currency, Price, Stock
-
-# TODO Test
+from pyp.cli.ingest.commands.base import IngestBaseCommand
+from pyp.database.models import Price, Stock
 
 
-class IngestStocks:
-    @property
-    def stocks(self) -> Sequence[Stock]:
-        with Session(engine) as session:
-            stocks = session.scalars(select(Stock)).all()
+class IngestStocksCommand(IngestBaseCommand):
+    _stocks: Sequence[Stock]
+    _stock_ids_by_moniker: dict[str, int]
+    _monikers: list[str]
+    _prices_df: DataFrame
+    _close_prices_df: DataFrame
 
-        return stocks
+    def __init__(
+        self,
+        engine: Engine,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        monikers: list[str] | None = None,
+        exclude_monikers: list[str] | None = None,
+    ):
+        super().__init__(engine)
 
-    @cached_property
-    def stocks_by_moniker(self) -> dict[str, Stock]:
-        with Session(engine) as session:
-            stocks = session.scalars(select(Stock)).all()
+        self.start_date = start_date
+        self.end_date = end_date
+        self.monikers = monikers
+        self.exclude_monikers = exclude_monikers
 
-        return {s.moniker: s for s in stocks}
+    def _prepare_stocks_statement(self) -> Select:
+        statement = select(Stock)
 
-    @cached_property
-    def monikers(self) -> list[str]:
-        # return [stock.moniker for stock in self.stocks if stock.moniker != "BTCO"]
-        return [stock.moniker for stock in self.stocks]
+        if self.monikers is not None:
+            statement = statement.where(Stock.moniker.in_(self.monikers))
 
-    @cached_property
-    def currencies(self) -> dict[str, Currency]:
-        with Session(engine) as session:
-            currencies = session.scalars(select(Currency)).all()
+        if self.exclude_monikers is not None:
+            statement = statement.where(Stock.moniker.notin_(self.exclude_monikers))
 
-        return {c.name: c for c in currencies}
+        return statement
 
-    def update_stock_info(self) -> None:
-        with Session(engine) as session:
-            for stock in self.stocks:
+    def _resolve_stocks(self) -> None:
+        with Session(self.engine) as session:
+            self._stocks = session.scalars(self._prepare_stocks_statement()).all()
+            self._stock_ids_by_moniker = {s.moniker: s.id for s in self._stocks}
+            self._monikers = list(self._stock_ids_by_moniker.keys())
+
+    def _prepare_updated_stock(self, stock: Stock) -> None:
+        ticker = Ticker(stock.moniker)
+        info = ticker.info
+
+        stock.stock_type = info["quoteType"]
+        stock.name = info["longName"]
+        stock.description = info["longBusinessSummary"]
+        stock.currency = self._currencies_by_code[info["currency"]]
+
+        match info["quoteType"]:
+            case "EQUITY":
+                stock.sector_weightings = json.dumps({info["sectorKey"]: 1.0})
+            case "ETF":
+                if ticker.funds_data.sector_weightings:
+                    stock.sector_weightings = json.dumps(ticker.funds_data.sector_weightings)
+                else:
+                    stock.sector_weightings = json.dumps({info["category"].replace(" ", "_").lower(): 1.0})
+
+    def _update_stock_info(self) -> None:
+        with Session(self.engine) as session:
+            for stock in self._stocks:
+                self._prepare_updated_stock(stock)
                 session.add(stock)
-
-                ticker = Ticker(stock.moniker)
-                info = ticker.info
-
-                stock.stock_type = info["quoteType"]
-                stock.name = info["longName"]
-                stock.description = info["longBusinessSummary"]
-
-                match info["quoteType"]:
-                    case "EQUITY":
-                        stock.sector_weightings = json.dumps({info["sectorKey"]: 1.0})
-                    case "ETF":
-                        if ticker.funds_data.sector_weightings:
-                            stock.sector_weightings = json.dumps(ticker.funds_data.sector_weightings)
-                        else:
-                            stock.sector_weightings = json.dumps({info["category"].replace(" ", "_").lower(): 1.0})
-
-                stock.currency = self.currencies[info["currency"]]
-
                 session.commit()
 
-    def update_stock_pricing(self, start_date: str | None, end_date: str | None) -> None:
+    def _prices_download_parameters(self) -> dict:
         download_params = {"period": "1y"}
 
-        if start_date is not None and end_date is not None:
-            download_params = {"start": start_date, "end": end_date}
+        if self.start_date is not None and self.end_date is not None:
+            download_params = {"start": self.start_date.strftime("%Y-%m-%d"), "end": self.end_date.strftime("%Y-%m-%d")}
 
-        download_df: DataFrame = download(self.monikers, **download_params)
+        return download_params
 
-        adj_close_series = download_df["Adj Close"].dropna()
+    def _download_prices_df(self) -> None:
+        self._prices_df = download(self._monikers, keepna=True, rounding=True, **self._prices_download_parameters())
 
-        with Session(engine) as session:
-            for moniker in self.monikers:
-                stock_prices_series = adj_close_series[moniker]
+    def _extract_close_prices(self) -> None:
+        self._close_prices_df = self._prices_df["Close"].fillna(0)  # type: ignore[assignment]
 
-                print(stock_prices_series)
+    def _prepare_price_upsert_statement(self, moniker: str) -> Insert:
+        stock_prices_series = self._close_prices_df[moniker]
 
-                prices = [
-                    Price(
-                        stock=self.stocks_by_moniker[moniker],
-                        date=price_date,
-                        amount=price_amount,
-                    )
-                    for price_date, price_amount in zip(stock_prices_series.index, stock_prices_series.to_list())
-                ]
+        values = [
+            {
+                "stock_id": self._stock_ids_by_moniker[moniker],
+                "date": price_date,
+                "amount": price_amount,
+            }
+            for price_date, price_amount in zip(stock_prices_series.index, stock_prices_series.to_list())
+        ]
 
-                session.add_all(prices)
+        statement = insert(Price).values(values)
 
-            try:
+        return statement.on_conflict_do_update(
+            index_elements=["stock_id", "date"],
+            set_={"amount": statement.excluded.amount},
+        )
+
+    def _update_stock_pricing(self) -> None:
+        with Session(self.engine) as session:
+            for moniker in self._monikers:
+                statement = self._prepare_price_upsert_statement(moniker)
+
+                session.execute(statement)
                 session.commit()
-            except IntegrityError:
-                print("Already have prices. Should implement a real UPSERT.")
 
-    def ingest(self, start_date: str | None = None, end_date: str | None = None) -> None:
-        self.update_stock_info()
-        self.update_stock_pricing(start_date, end_date)
+    def execute(self) -> None:
+        self._resolve_stocks()
+        self._resolve_currencies()
+
+        self._update_stock_info()
+
+        self._download_prices_df()
+        self._extract_close_prices()
+        self._update_stock_pricing()

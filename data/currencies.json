@@ -1,0 +1,5 @@
+[
+    {"code": "USD", "name": "United States Dollar"},
+    {"code": "CAD", "name": "Canadian Dollar"},
+    {"code": "EUR", "name": "Euro"}
+]

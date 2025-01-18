@@ -4,8 +4,6 @@ from sqlalchemy.orm import Session
 from pyp.database.engine import engine
 from pyp.database.models import Portfolio, User
 
-# TODO Test
-
 
 def resolve_portfolio(username: str, portfolio_name: str) -> Portfolio:
     with Session(engine) as session:
