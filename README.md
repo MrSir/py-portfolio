@@ -26,7 +26,7 @@ pyp --help
 ```
 
 ## Setup
-The first thing you will need is to tell the tool to set up it's database. This can be achieved by running:
+The first thing you will need is to tell the tool to set up its database. This can be achieved by running:
 ```console
 pyp setup
 ```
