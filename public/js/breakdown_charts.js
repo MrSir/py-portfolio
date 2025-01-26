@@ -1,9 +1,16 @@
+
+
 breakdown_by_moniker_labels = []
 breakdown_by_moniker = []
 breakdown_by_moniker_data.forEach(function(point){
     breakdown_by_moniker_labels.push(point.moniker)
     breakdown_by_moniker.push((point.percent * 100).toFixed(2))
 });
+
+show_pie_legend = false
+if (is_xlarge) {
+  show_pie_legend = {position: "right"}
+}
 
 const breakdownByMonikerCanvas = document.getElementById('breakdownByMoniker');
 new Chart(
@@ -23,7 +30,7 @@ new Chart(
     options: {
       responsive: true,
       plugins: {
-        legend: false,
+        legend: show_pie_legend,
         title: {
           display: true,
           text: 'Percent of Portfolio by Moniker'
@@ -58,7 +65,7 @@ new Chart(
     options: {
       responsive: true,
       plugins: {
-        legend: false,
+        legend: show_pie_legend,
         title: {
           display: true,
           text: 'Percent of Portfolio by Stock Type'
@@ -93,7 +100,7 @@ new Chart(
     options: {
       responsive: true,
       plugins: {
-        legend: false,
+        legend: show_pie_legend,
         title: {
           display: true,
           text: 'Percent of Portfolio by Sector'
@@ -128,6 +135,10 @@ Object.keys(growth_breakdown_equity_data_by_moniker).forEach(function(key){
   )
 });
 
+show_legend = false
+if (is_large || is_xlarge) {
+  show_legend = {position: "right"}
+}
 const growthBreakdownEquityCanvas = document.getElementById('growthBreakdownEquity');
 new Chart(
   growthBreakdownEquityCanvas,
@@ -140,9 +151,7 @@ new Chart(
     options: {
       responsive: true,
       plugins: {
-        legend: {
-          position: 'right',
-        },
+        legend: show_legend,
         title: {
           display: true,
           text: 'Portfolio Growth(%) for Equity Stock'
@@ -189,9 +198,7 @@ new Chart(
     options: {
       responsive: true,
       plugins: {
-        legend: {
-          position: 'right',
-        },
+        legend: show_legend,
         title: {
           display: true,
           text: 'Portfolio Growth(%) for ETF Stock'
@@ -237,9 +244,7 @@ new Chart(
     options: {
       responsive: true,
       plugins: {
-        legend: {
-          position: 'right',
-        },
+        legend: show_legend,
         title: {
           display: true,
           text: 'Market Growth(%) for Equity Stock'
@@ -285,9 +290,7 @@ new Chart(
     options: {
       responsive: true,
       plugins: {
-        legend: {
-          position: 'right',
-        },
+        legend: show_legend,
         title: {
           display: true,
           text: 'Market Growth(%) for ETF Stock'

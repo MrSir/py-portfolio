@@ -40,6 +40,10 @@ Object.keys(annual_growth_values).forEach(function (key) {
   annual_growth_values[key] = (annual_growth_values[key] * 100).toFixed(2)
 });
 
+show_legend = false
+if (is_large || is_xlarge) {
+  show_legend = {position: "right"}
+}
 const investedVSmarketCanvas = document.getElementById('investedVSmarket');
 new Chart(
   investedVSmarketCanvas,
@@ -67,9 +71,7 @@ new Chart(
           display: true,
           text: "Invested vs. Market Value"
         },
-        legend: {
-          position: 'right',
-        },
+        legend: show_legend,
       },
     },
   }

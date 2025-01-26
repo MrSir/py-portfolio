@@ -1,0 +1,23 @@
+@media all and (min-width: 768px) {
+    #main-grid{
+        grid-template-areas:
+                'sidebar charts'
+                'powerBy .';
+        grid-template-columns: 400px auto;
+        grid-column-gap: 10px;
+    }
+
+    #sidebar{
+        grid-template-areas:
+            'summaryCard'
+            'portfolioCard'
+            'sharesCard'
+            '.';
+        grid-template-rows: min-content min-content min-content auto;
+    }
+
+    #charts{
+        background-color: #33393d;
+        padding: 10px;
+    }
+}

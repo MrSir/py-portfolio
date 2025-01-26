@@ -12,198 +12,160 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link href="./css/style.css" rel="stylesheet">
+    <link href="./css/style_m.css" rel="stylesheet">
+    <link href="./css/style_l.css" rel="stylesheet">
+    <link href="./css/style_xl.css" rel="stylesheet">
+    <script type="text/javascript">
+        var w = window.innerWidth;
+
+        const is_small = w < 768
+        const is_medium = w >= 768 && w < 1200
+        const is_large = w >= 1200 && w < 2450
+        const is_xlarge = w >= 2450
+    </script>
     <script src="./js/output/summary.js"></script>
     <script src="./js/output/growth.js"></script>
     <script src="./js/output/breakdown.js"></script>
 </head>
 <body data-bs-theme="dark">
-<div class="container-fluid">
-    <div class="row">
-        <div id="sidebar" class="col col-3">
-            <div class="row">
-                <div class="col">
-                    <div class="card">
-                        <div class="card-body">
-                            <h4 class="card-title">Summary</h4>
-                            <p class="card-text">
-                                <b>Date:</b> <span id="date"></span><br>
-                                <b>User:</b> <span id="username"></span><br>
-                                <b>Portfolio:</b> <span id="portfolio"></span><br>
-                                <b>Currency:</b> <span id="currency"></span><br>
-                                <b># Equities:</b> <span id="numberOfEquities"></span><br>
-                                <b># ETFs:</b> <span id="numberOfETFs"></span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <div class="card">
-                        <div class="card-body">
-                            <h4 class="card-title">Portfolio(<span id="currentPercent"></span>)</h4>
-                            <p class="card-text">
-                            <table class="table table-striped table-sm">
-                                <thead>
-                                <tr>
-                                    <th scope="col" class="align-top text-center">Moniker</th>
-                                    <th scope="col" class="align-top text-end">Invested</th>
-                                    <th scope="col" class="align-top text-end">Value</th>
-                                </tr>
-                                </thead>
-                                <tbody id="portfolioData" class="table-group-divider">
-                                <tr>
-                                    <td><span class="placeholder col-12"></span></td>
-                                    <td><span class="placeholder col-12"></span></td>
-                                    <td><span class="placeholder col-12"></span></td>
-                                </tr>
-                                </tbody>
-                                <tfoot>
-                                <tr>
-                                    <td class="text-end"><b>Total</b></td>
-                                    <td class="text-end"><b><span id="investedValue"></span></b></td>
-                                    <td class="text-end"><b><span id="currentValue"></span></b></td>
-                                </tr>
-                                </tfoot>
-                            </table>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <div class="card">
-                        <div class="card-body">
-                            <h4 class="card-title">Shares</h4>
-                            <p class="card-text">
-                            <table class="table table-striped table-sm">
-                                <thead>
-                                <tr>
-                                    <th scope="col" class="align-top text-center">Moniker</th>
-                                    <th scope="col" class="align-top text-end">Shares</th>
-                                    <th scope="col" class="align-top text-end">Average Price</th>
-                                    <th scope="col" class="align-top text-end">Market Price</th>
-                                </tr>
-                                </thead>
-                                <tbody id="sharesData" class="table-group-divider">
-                                <tr>
-                                    <td><span class="placeholder col-12"></span></td>
-                                    <td><span class="placeholder col-12"></span></td>
-                                    <td><span class="placeholder col-12"></span></td>
-                                    <td><span class="placeholder col-12"></span></td>
-                                </tr>
-                                </tbody>
-                            </table>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <p class="text-body-secondary">
-                        <b>Powered by <a href="https://github.com/MrSir/py-portfolio" target="_blank" class="text-reset">Py Portfolio</a></b>
-                    </p>
-                </div>
+<div id="main-grid">
+    <div id="sidebar">
+        <div id="summaryCard" class="card">
+            <div class="card-body">
+                <h4 class="card-title">Summary</h4>
+                <p class="card-text">
+                    <b>Date:</b> <span id="date"></span><br>
+                    <b>User:</b> <span id="username"></span><br>
+                    <b>Portfolio:</b> <span id="portfolio"></span><br>
+                    <b>Currency:</b> <span id="currency"></span><br>
+                    <b># Equities:</b> <span id="numberOfEquities"></span><br>
+                    <b># ETFs:</b> <span id="numberOfETFs"></span>
+                </p>
             </div>
         </div>
-        <div id="charts" class="col col-9">
-            <div class="row">
-                <div class="col col-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="investedVSmarket"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col col-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="profitGrowth"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col col-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="portfolioRatio"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col col-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="monthlyGrowth"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col col-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="annualGrowth"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col col-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="breakdownByMoniker"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col col-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="breakdownByStockType"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col col-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="breakdownBySector"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col col-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="growthBreakdownEquity"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col col-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="growthBreakdownETF"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col col-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="growthBreakdownMonthOverMonthEquity"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col col-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="growthBreakdownMonthOverMonthETF"></canvas>
-                        </div>
-                    </div>
-                </div>
+        <div id="portfolioCard" class="card">
+            <div class="card-body">
+                <h4 class="card-title">Portfolio(<span id="currentPercent"></span>)</h4>
+                <p class="card-text">
+                <table class="table table-striped table-sm">
+                    <thead>
+                    <tr>
+                        <th scope="col" class="align-top text-center">Moniker</th>
+                        <th scope="col" class="align-top text-end">Invested</th>
+                        <th scope="col" class="align-top text-end">Value</th>
+                    </tr>
+                    </thead>
+                    <tbody id="portfolioData" class="table-group-divider">
+                    <tr>
+                        <td><span class="placeholder col-12"></span></td>
+                        <td><span class="placeholder col-12"></span></td>
+                        <td><span class="placeholder col-12"></span></td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td class="text-end"><b>Total</b></td>
+                        <td class="text-end"><b><span id="investedValue"></span></b></td>
+                        <td class="text-end"><b><span id="currentValue"></span></b></td>
+                    </tr>
+                    </tfoot>
+                </table>
+                </p>
             </div>
         </div>
+        <div id="sharesCard" class="card">
+            <div class="card-body">
+                <h4 class="card-title">Shares</h4>
+                <p class="card-text">
+                <table class="table table-striped table-sm">
+                    <thead>
+                    <tr>
+                        <th scope="col" class="align-top text-center">Moniker</th>
+                        <th scope="col" class="align-top text-end">Shares</th>
+                        <th scope="col" class="align-top text-end">Average Price</th>
+                        <th scope="col" class="align-top text-end">Market Price</th>
+                    </tr>
+                    </thead>
+                    <tbody id="sharesData" class="table-group-divider">
+                    <tr>
+                        <td><span class="placeholder col-12"></span></td>
+                        <td><span class="placeholder col-12"></span></td>
+                        <td><span class="placeholder col-12"></span></td>
+                        <td><span class="placeholder col-12"></span></td>
+                    </tr>
+                    </tbody>
+                </table>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div id="powerBy">
+        <p class="text-body-secondary">
+            <b>Powered by <a href="https://github.com/MrSir/py-portfolio" target="_blank" class="text-reset">Py Portfolio</a></b>
+        </p>
+    </div>
+    <div id="charts">
+        <div id="investedVSmarketCard" class="card">
+            <div class="card-body">
+                <canvas id="investedVSmarket"></canvas>
+            </div>
+        </div>
+        <div id="profitGrowthCard" class="card">
+            <div class="card-body">
+                <canvas id="profitGrowth"></canvas>
+            </div>
+        </div>
+        <div id="portfolioRatioCard" class="card">
+            <div class="card-body">
+                <canvas id="portfolioRatio"></canvas>
+            </div>
+        </div>
+        <div id="monthlyGrowthCard" class="card">
+            <div class="card-body">
+                <canvas id="monthlyGrowth"></canvas>
+            </div>
+        </div>
+        <div id="annualGrowthCard" class="card">
+            <div class="card-body">
+                <canvas id="annualGrowth"></canvas>
+            </div>
+        </div>
+        <div id="breakdownByMonikerCard" class="card">
+            <div class="card-body">
+                <canvas id="breakdownByMoniker"></canvas>
+            </div>
+        </div>
+        <div id="breakdownByStockTypeCard" class="card">
+            <div class="card-body">
+                <canvas id="breakdownByStockType"></canvas>
+            </div>
+        </div>
+        <div id="breakdownBySectorCard" class="card">
+            <div class="card-body">
+                <canvas id="breakdownBySector"></canvas>
+            </div>
+        </div>
+        <div id="growthBreakdownEquityCard" class="card">
+            <div class="card-body">
+                <canvas id="growthBreakdownEquity"></canvas>
+            </div>
+        </div>
+        <div id="growthBreakdownETFCard" class="card">
+            <div class="card-body">
+                <canvas id="growthBreakdownETF"></canvas>
+            </div>
+        </div>
+        <div id="growthBreakdownMonthOverMonthEquityCard" class="card">
+            <div class="card-body">
+                <canvas id="growthBreakdownMonthOverMonthEquity"></canvas>
+            </div>
+        </div>
+        <div id="growthBreakdownMonthOverMonthETFCard" class="card">
+            <div class="card-body">
+                <canvas id="growthBreakdownMonthOverMonthETF"></canvas>
+            </div>
+        </div>
+
     </div>
 </div>
 
