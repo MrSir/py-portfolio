@@ -1,21 +1,119 @@
-#sidebar .row+.row{
-    margin-top: 10px;
+body{
+    background-color: #141618;
 }
 
-#charts .row+ .row{
-    margin-top: 20px;
+#main-grid{
+    display: grid;
+    grid-template-areas:
+            'sidebar'
+            'charts'
+            'powerBy';
+    grid-template-rows: auto;
+    grid-row-gap: 10px;
+    margin: 10px;
 }
 
 #sidebar{
-    background-color: #141618;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    min-width: 400px;
+    grid-area: sidebar;
+    display: grid;
+    grid-template-areas:
+            'summaryCard'
+            'portfolioCard'
+            'sharesCard';
+    grid-template-rows: auto;
+    grid-row-gap: 10px;
+}
+
+#sidebar #summaryCard{
+    grid-area: summaryCard;
+    display: grid;
+}
+#sidebar #portfolioCard{
+    grid-area: portfolioCard;
+    display: grid;
+}
+#sidebar #sharesCard{
+    grid-area: sharesCard;
+    display: grid;
 }
 
 #charts{
-    background-color: #33393d;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    min-width: 1200px;
+    grid-area: charts;
+    display: grid;
+    grid-template-areas:
+            'investedVSmarketCard'
+            'profitGrowthCard'
+            'portfolioRatioCard'
+            'monthlyGrowthCard'
+            'annualGrowthCard'
+            'breakdownByMonikerCard'
+            'breakdownByStockTypeCard'
+            'breakdownBySectorCard'
+            'growthBreakdownEquityCard'
+            'growthBreakdownETFCard'
+            'growthBreakdownMonthOverMonthEquityCard'
+            'growthBreakdownMonthOverMonthETFCard';
+    grid-template-rows: auto;
+    grid-row-gap: 10px;
+/*    background-color: #33393d;*/
 }
+
+#charts #investedVSmarketCard{
+    grid-area: investedVSmarketCard;
+    display: grid;
+}
+#charts #profitGrowthCard{
+    grid-area: profitGrowthCard;
+    display: grid;
+}
+#charts #portfolioRatioCard{
+    grid-area: portfolioRatioCard;
+    display: grid;
+}
+#charts #monthlyGrowthCard{
+    grid-area: monthlyGrowthCard;
+    display: grid;
+}
+#charts #annualGrowthCard{
+    grid-area: annualGrowthCard;
+    display: grid;
+}
+#charts #breakdownByMonikerCard{
+    grid-area: breakdownByMonikerCard;
+    display: grid;
+}
+#charts #breakdownByStockTypeCard{
+    grid-area: breakdownByStockTypeCard;
+    display: grid;
+}
+#charts #breakdownBySectorCard{
+    grid-area: breakdownBySectorCard;
+    display: grid;
+}
+#charts #growthBreakdownEquityCard{
+    grid-area: growthBreakdownEquityCard;
+    display: grid;
+}
+#charts #growthBreakdownETFCard{
+    grid-area: growthBreakdownETFCard;
+    display: grid;
+}
+#charts #growthBreakdownMonthOverMonthEquityCard{
+    grid-area: growthBreakdownMonthOverMonthEquityCard;
+    display: grid;
+}
+#charts #growthBreakdownMonthOverMonthETFCard{
+    grid-area: growthBreakdownMonthOverMonthETFCard;
+    display: grid;
+}
+
+
+#powerBy{
+    grid-area: powerBy;
+    display: grid;
+    margin-top: 10px;
+}
+
+/*#sidebar .row+.row{*/
+/*    margin-top: 10px;*/
+/*}*/
