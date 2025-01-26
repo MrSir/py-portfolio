@@ -1,9 +1,4 @@
-var w = window.innerWidth;
 
-const is_small = w < 768
-const is_medium = w >= 768 && w < 1200
-const is_large = w >= 1200 && w < 2450
-const is_xlarge = w >= 2450
 
 breakdown_by_moniker_labels = []
 breakdown_by_moniker = []
@@ -141,10 +136,9 @@ Object.keys(growth_breakdown_equity_data_by_moniker).forEach(function(key){
 });
 
 show_legend = false
-if (is_small || is_large || is_xlarge) {
+if (is_large || is_xlarge) {
   show_legend = {position: "right"}
 }
-
 const growthBreakdownEquityCanvas = document.getElementById('growthBreakdownEquity');
 new Chart(
   growthBreakdownEquityCanvas,
