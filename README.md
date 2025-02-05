@@ -30,7 +30,7 @@ The first thing you will need is to tell the tool to set up its database. This c
 ```console
 pyp setup
 ```
-Optionally the command comes with a `--seed` or `-s` option that will seed the `USD`, `CAD`, and `EUR` currencies and the exchange rates between any pair of them for all of 2022 to 2024. No api needed, the rates are part of the repo.
+Optionally the command comes with a `--seed` or `-s` option that will seed the `USD`, `CAD`, and `EUR` currencies and the exchange rates between any pair of them for all of January, 2021 to January, 2025. No api needed, the rates are part of the repo.
 
 ### Exchange Rates
 In order to allow the tool to pull in more exchange rates you need to provide an `.env` file in the root directory that contains a `FREE_CURRENCY_API_KEY` key inside it. Feel free to copy the `.env.sample` file and fill in the value of your own api key.

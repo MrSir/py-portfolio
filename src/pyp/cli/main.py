@@ -37,7 +37,8 @@ def setup(
         typer.Option(
             "--seed",
             "-s",
-            help="Seed the database with USD, CAD, EUR Currencies and Exchange Rates between (2022 - 2024).",
+            help="Seed the database with USD, CAD, EUR Currencies and Exchange Rates between "
+            "(January, 2021 - January, 2025).",
         ),
     ] = False,
 ) -> None:
