@@ -147,6 +147,8 @@ class OutputGrowthCommand(OutputCommand):
     def _compute_profit_ratio(self) -> Self:
         self._df["profit_ratio"] = (self._df["profit"] / self._df["invested"]).fillna(0)
 
+        self._df.loc[self._df["invested"] <= 0, "profit_ratio"] = 0
+
         return self
 
     def _compute_profit_ratio_difference(self) -> Self:

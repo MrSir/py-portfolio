@@ -259,6 +259,7 @@ def test_compute_profit_ratio(command: OutputGrowthCommand, profit_df: DataFrame
     df = profit_df.copy(deep=True)
     df["profit_ratio"] = df["profit"] / df["invested"]
     df["profit_ratio"] = df["profit_ratio"].fillna(0)
+    df.loc[df["invested"] <= 0, "profit_ratio"] = 0
 
     assert command == command._compute_profit_ratio()
 
