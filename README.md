@@ -30,7 +30,7 @@ The first thing you will need is to tell the tool to set up its database. This c
 ```console
 pyp setup
 ```
-Optionally the command comes with a `--seed` or `-s` option that will seed the `USD`, `CAD`, and `EUR` currencies and the exchange rates between any pair of them for all of January, 2021 to January, 2025. No api needed, the rates are part of the repo.
+Optionally the command comes with a `--seed` or `-s` option that will seed the `USD`, `CAD`, and `EUR` currencies and the exchange rates between any pair of them for all of January 2021 to February 2025. No api needed, the rates are part of the repo.
 
 ### Exchange Rates
 In order to allow the tool to pull in more exchange rates you need to provide an `.env` file in the root directory that contains a `FREE_CURRENCY_API_KEY` key inside it. Feel free to copy the `.env.sample` file and fill in the value of your own api key.
@@ -42,7 +42,7 @@ pyp ingest exchange-rates --help
 
 > WARNING: depending on your API Key Tier there may be limitations to how much data you can pull per minute, so choose your date range carefully.
 
-> NOTE: I do plan on expanding the pre-packaged exchange rates with the tool to as far back as 2020 and every so often add the latest ones into 2025
+> NOTE: I do plan on expanding the pre-packaged exchange rates with the tool every so often up to the most recent completed month
 
 ### Creating Portfolio
 Once the project is set up, and you have your exchange rates you are ready to start creating portfolios. In order to do this you will first need a user, which can be created by running:
@@ -64,6 +64,11 @@ And finally adding your share holdings for the equities in your portfolio can be
 ```console
 pyp portfolio <USERNAME> <PORTFOLIO_NAME> add-shares <MONIKER> <AMOUNT> <PRICE> <PURCHASED_ON>
 ```
+Similarly, removing (selling) share holdings can be done by:
+```console
+pyp portfolio <USERNAME> <PORTFOLIO_NAME> remove-shares <MONIKER> <AMOUNT> <PRICE> <PURCHASED_ON>
+```
+
 > NOTE: the <PRICE> is the $/share you paid and not the total amount you paid for all the shares purchased at that time.
 
 ### Market Prices
