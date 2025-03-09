@@ -38,7 +38,7 @@ def setup(
             "--seed",
             "-s",
             help="Seed the database with USD, CAD, EUR Currencies and Exchange Rates between "
-            "(January, 2021 - January, 2025).",
+            "(January 2020 - February 2025).",
         ),
     ] = False,
 ) -> None:
