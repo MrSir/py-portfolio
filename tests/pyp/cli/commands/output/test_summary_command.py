@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from unittest.mock import MagicMock, call
 
+import numpy as np
 import pytest
 from pandas import DataFrame
 from pytest_mock import MockerFixture
@@ -154,7 +155,7 @@ def test_compute_average_price(command: OutputSummaryCommand, summed_up_by_monik
     command._df = summed_up_by_moniker_df
 
     df = summed_up_by_moniker_df.copy(deep=True)
-    df["average_price"] = (df["invested"] / df["amount"]).fillna(0)
+    df["average_price"] = (df["invested"] / df["amount"]).replace([-np.inf], np.nan).fillna(0)
 
     assert command == command._compute_average_price()
 

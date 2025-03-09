@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from typing import Self
 
+import numpy as np
 from sqlalchemy import Engine
 
 from pyp.cli.commands.output.growth import OutputGrowthCommand
@@ -43,10 +44,12 @@ class OutputSummaryCommand(OutputGrowthCommand):
             .reset_index()
         )
 
+        self._df = self._df[self._df["invested"] > 0]
+
         return self
 
     def _compute_average_price(self) -> Self:
-        self._df["average_price"] = (self._df["invested"] / self._df["amount"]).fillna(0)
+        self._df["average_price"] = (self._df["invested"] / self._df["amount"]).replace([-np.inf], np.nan).fillna(0)
 
         return self
 
