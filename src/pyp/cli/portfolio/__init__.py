@@ -25,7 +25,7 @@ def add(ctx: typer.Context, moniker: Annotated[str, typer.Argument(help="The mon
     AddMonikerCommand(engine, ctx.obj["portfolio"], moniker).execute()
 
 
-@portfolio_app.command(name="add-shares", help="Add shares for a moniker to the portfolio.")
+@portfolio_app.command(name="add-shares", help="Add (buy) shares for a moniker to the portfolio.")
 def add_shares(
     ctx: typer.Context,
     moniker: Annotated[str, typer.Argument(help="The moniker.")],
@@ -34,3 +34,14 @@ def add_shares(
     purchased_on: Annotated[datetime, typer.Argument(metavar="YYYY-MM-DD", help="The date of purchase of the shares.")],
 ) -> None:
     AddSharesCommand(engine, ctx.obj["portfolio"], moniker, amount, price, purchased_on).execute()
+
+
+@portfolio_app.command(name="remove-shares", help="Remove (sell) shares for a moniker from the portfolio.")
+def remove_shares(
+    ctx: typer.Context,
+    moniker: Annotated[str, typer.Argument(help="The moniker.")],
+    amount: Annotated[float, typer.Argument(help="The amount of shares.")],
+    price: Annotated[float, typer.Argument(help="The price paid for the shares.")],
+    purchased_on: Annotated[datetime, typer.Argument(metavar="YYYY-MM-DD", help="The date of purchase of the shares.")],
+) -> None:
+    AddSharesCommand(engine, ctx.obj["portfolio"], moniker, -amount, price, purchased_on).execute()

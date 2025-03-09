@@ -69,19 +69,19 @@ class OutputGrowthBreakdownCommand(OutputGrowthCommand):
 
 
 class OutputGrowthBreakdownMonthOverMonthCommand(OutputGrowthBreakdownCommand):
-    def _calculate_monthly_difference(self) -> Self:
-        self._df["price_difference"] = self._df.groupby(["moniker"], sort=False)["market_price"].diff().fillna(0)
-        self._df["last_market_price"] = self._df.groupby(["moniker"], sort=False)["market_price"].shift().fillna(0)
-        self._df["month_over_month_ratio"] = (self._df["price_difference"] / self._df["last_market_price"]).fillna(0)
-        self._df = self._df.drop(columns=["price_difference", "last_market_price"])
-
-        return self
-
     def _convert_to_currency(self) -> Self:
         self._df["invested"] = self._df["invested"] * self._df["rate"]
         self._df["market_price"] = self._df["market_price"] * self._df["rate"]
 
         self._df = self._df.drop(columns=["rate"])
+
+        return self
+
+    def _calculate_monthly_difference(self) -> Self:
+        self._df["price_difference"] = self._df.groupby(["moniker"], sort=False)["market_price"].diff().fillna(0)
+        self._df["last_market_price"] = self._df.groupby(["moniker"], sort=False)["market_price"].shift().fillna(0)
+        self._df["month_over_month_ratio"] = (self._df["price_difference"] / self._df["last_market_price"]).fillna(0)
+        self._df = self._df.drop(columns=["price_difference", "last_market_price"])
 
         return self
 
