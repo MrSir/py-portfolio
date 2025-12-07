@@ -54,7 +54,9 @@ class OutputCommand:
             .where(ExchangeRate.to_currency_id == base_currency_id)
             .where(ExchangeRate.from_currency_id.in_(currency_ids))
             .where(ExchangeRate.date <= self.date.strftime("%Y-%m-%d"))
-            .group_by(func.strftime("%Y-%m", ExchangeRate.date))
+            .group_by(
+                ExchangeRate.to_currency_id, ExchangeRate.from_currency_id, func.strftime("%Y-%m", ExchangeRate.date)
+            )
             .order_by(ExchangeRate.date)
         )
 
