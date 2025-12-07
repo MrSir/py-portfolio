@@ -107,7 +107,8 @@ class OutputGrowthCommand(OutputCommand):
 
     def _compute_market_value(self) -> Self:
         self._df["value"] = self._df["amount"] * self._df["market_price"]
-        self._df = self._df.drop(columns=["amount", "market_price"]).reset_index()
+        # self._df = self._df.drop(columns=["amount", "market_price"]).reset_index()
+        self._df = self._df.drop(columns=["market_price"]).reset_index()
 
         return self
 
