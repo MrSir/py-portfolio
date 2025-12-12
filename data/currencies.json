@@ -1,5 +1,6 @@
 [
     {"code": "USD", "name": "United States Dollar"},
     {"code": "CAD", "name": "Canadian Dollar"},
-    {"code": "EUR", "name": "Euro"}
+    {"code": "EUR", "name": "Euro"},
+    {"code": "CHF", "name": "Swiss Franc"}
 ]

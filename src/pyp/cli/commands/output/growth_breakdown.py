@@ -33,6 +33,9 @@ class OutputGrowthBreakdownCommand(OutputGrowthCommand):
     @property
     def _equity_month_vs_profit_ratio_df(self) -> DataFrame:
         df = self._df[self._df["stock_type"] == "EQUITY"].copy(deep=True)
+
+        df.loc[df["amount"].round(2) == 0, "profit_ratio"] = None
+
         df = df[["month", "moniker", "profit_ratio"]]
 
         data = {
@@ -47,6 +50,9 @@ class OutputGrowthBreakdownCommand(OutputGrowthCommand):
     @property
     def _etf_month_vs_profit_ratio_df(self) -> DataFrame:
         df = self._df[self._df["stock_type"] == "ETF"].copy(deep=True)
+
+        df.loc[df["amount"].round(2) == 0, "profit_ratio"] = None
+
         df = df[["month", "moniker", "profit_ratio"]]
 
         data = {

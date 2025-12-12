@@ -9,7 +9,7 @@ from pyp.database.engine import engine
 currency_app = Typer(name="currency", help="Manage currency DB entities.")
 
 
-@currency_app.command(name="add", help="Add a moniker to the portfolio.")
+@currency_app.command(name="add", help="Add a currency to the portfolio.")
 def add(
     code: Annotated[str, typer.Argument(help="The short code of the currency. (e.g. USD)")],
     name: Annotated[str, typer.Argument(help="The name of the currency. (e.g. United States Dollar)")],

@@ -121,7 +121,13 @@ growth_breakdown_by_stock_type_data.EQUITY.forEach(function(point){
       if (!(key in growth_breakdown_equity_data_by_moniker)) {
         growth_breakdown_equity_data_by_moniker[key] = []
       }
-      growth_breakdown_equity_data_by_moniker[key].push((point[key] * 100).toFixed(2))
+
+      value = point[key]
+      if (value != null) {
+        growth_breakdown_equity_data_by_moniker[key].push((value * 100).toFixed(2))
+      } else{
+        growth_breakdown_equity_data_by_moniker[key].push(value)
+      }
     }
   })
 });
@@ -131,6 +137,7 @@ Object.keys(growth_breakdown_equity_data_by_moniker).forEach(function(key){
       label: key,
       data: growth_breakdown_equity_data_by_moniker[key],
       fill: false,
+      spanGaps: false,
     }
   )
 });
@@ -172,7 +179,13 @@ growth_breakdown_by_stock_type_data.ETF.forEach(function(point){
       if (!(key in growth_breakdown_etf_data_by_moniker)) {
         growth_breakdown_etf_data_by_moniker[key] = []
       }
-      growth_breakdown_etf_data_by_moniker[key].push((point[key] * 100).toFixed(2))
+
+      value = point[key]
+      if (value != null) {
+        growth_breakdown_etf_data_by_moniker[key].push((value * 100).toFixed(2))
+      }else{
+        growth_breakdown_etf_data_by_moniker[key].push(value)
+      }
     }
   })
 });
@@ -182,6 +195,7 @@ Object.keys(growth_breakdown_etf_data_by_moniker).forEach(function(key){
       label: key,
       data: growth_breakdown_etf_data_by_moniker[key],
       fill: false,
+      spanGaps: false,
     }
   )
 });
