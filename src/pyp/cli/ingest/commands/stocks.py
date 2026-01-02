@@ -56,8 +56,8 @@ class IngestStocksCommand(IngestBaseCommand):
         info = ticker.info
 
         stock.stock_type = info["quoteType"]
-        stock.name = info["longName"]
-        stock.description = info["longBusinessSummary"]
+        stock.name = info["longName"] if "longName" in info else info["shortName"]
+        stock.description = info["longBusinessSummary"] if "longBusinessSummary" in info else None
         stock.currency = self._currencies_by_code[info["currency"]]
 
         match info["quoteType"]:
@@ -68,6 +68,10 @@ class IngestStocksCommand(IngestBaseCommand):
                     stock.sector_weightings = json.dumps(ticker.funds_data.sector_weightings)
                 else:
                     stock.sector_weightings = json.dumps({info["category"].replace(" ", "_").lower(): 1.0})
+            case "FUTURE":
+                if info["exchange"] == "CMX":
+                    stock.stock_type = "COMMODITY"
+                    stock.sector_weightings = json.dumps({"commodity": 1.0})
 
     def _update_stock_info(self) -> None:
         with Session(self.engine) as session:
