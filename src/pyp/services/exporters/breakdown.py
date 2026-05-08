@@ -7,11 +7,11 @@ from pandas import DataFrame
 from sqlalchemy import Selectable, func, select
 from sqlalchemy.orm import Session
 
-from pyp.cli.commands.output.base import OutputCommand
+from pyp.services.exporters.base import Exporter
 from pyp.database.models import ExchangeRate, PortfolioStocks, Price, Share, Stock
 
 
-class OutputBreakdownCommand(OutputCommand):
+class BreakdownExporter(Exporter):
     @property
     def _db_query(self) -> Selectable:
         return (
