@@ -1,17 +1,16 @@
 from datetime import datetime, timedelta
 
 import freecurrencyapi
-from sqlalchemy import Engine, Insert
+from sqlalchemy import Engine, Insert, select
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 
-from pyp.cli.ingest.commands.base import IngestBaseCommand
-from pyp.database.models import ExchangeRate
+from pyp.database.models import Currency, ExchangeRate
 
 
-class IngestExchangeRatesCommand(IngestBaseCommand):
+class IngestExchangeRatesCommand:
     def __init__(self, engine: Engine, start_date: datetime, end_date: datetime, api_key: str):
-        super().__init__(engine)
+        self.engine = engine
 
         self.start_date = start_date
         self.end_date = end_date
@@ -20,6 +19,14 @@ class IngestExchangeRatesCommand(IngestBaseCommand):
         self._client: freecurrencyapi.Client | None = None
         self._currency_pairs: dict[str, list[str]] = dict()
         self._exchange_rates_values: list[dict] = []
+
+    @property
+    def currencies_by_code(self) -> dict[str, Currency]:
+        if self._currencies_by_code is None:
+            with Session(self.engine) as session:
+                self._currencies_by_code = {c.code: c for c in session.scalars(select(Currency)).all()}
+
+        return self._currencies_by_code
 
     @property
     def client(self) -> freecurrencyapi.Client:
